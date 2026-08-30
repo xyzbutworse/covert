@@ -1,0 +1,6 @@
+# sncast profiles for COVERT deployment.
+# Secrets are NEVER stored here. The deploy scripts read them from cairo/.env.deploy
+# (keystore/account references only — no private keys in this repository).
+
+[mainnet]
+url = "https://starknet-mainnet.g.alchemy.com/starknet/version/rpc/v0_10/__FILL_IN__"

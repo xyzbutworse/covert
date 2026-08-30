@@ -1,0 +1,16 @@
+node_modules
+.next
+.env.local
+.env.deploy
+**/.covert-keystore*
+**/*.keystore
+**/*_account.json
+.DS_Store
+coverage
+cairo/target
+cairo/.snfoundry_cache
+.impeccable
+*.tsbuildinfo
+AGENTS.md
+CLAUDE.md
+design-preview.html

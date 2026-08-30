@@ -2,6 +2,8 @@
 
 **Incident cover that pays privately.**
 
+[Live demo](https://covert-lilac.vercel.app)
+
 COVERT is fixed-indemnity incident cover for onchain teams. A team can activate cover, file an authenticated incident claim, and receive an approved fixed payout without COVERT publicly linking the protected wallet to the settlement destination.
 
 > **Winner surface:** Public rules. Private beneficiary. Real settlement.
@@ -103,7 +105,7 @@ See [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md) and [`SECURITY.md`](SECURITY.
 - `cairo/src/covert_policy.cairo` — fixed-indemnity state, reserve, authentication, adjudication and replay protection.
 - `cairo/src/covert_anonymizer.cairo` — pool-only `privacy_invoke` router and `OpenNoteDeposit` return path.
 - `docs/` — architecture, privacy model, threat model, mainnet proof ledger and compressed judge demo.
-- `strk20.json` — official evidence manifest. It intentionally remains empty until genuine mainnet evidence exists.
+- `strk20.json` — official evidence manifest. The public demo URL is live. Transaction and contract fields stay empty until genuine Mainnet evidence exists.
 
 ## Local development
 

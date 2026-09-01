@@ -1,4 +1,21 @@
 "use client";
+/**
+ * Wallet-facing writes.
+ *
+ * Every function here composes a transaction and returns its *real outcome*, not
+ * just a hash. A Starknet transaction can be included and still revert, so
+ * "we got a hash back" is never treated as success anywhere in COVERT.
+ *
+ * STRK20 action shapes follow the Wallet API (`wallet_strk20InvokeTransaction`):
+ *   deposit  { token, amount }                    — public shield
+ *   withdraw { token, amount, recipient }         — funds the anonymizer
+ *   invoke   { contract, calldata }               — drives privacy_invoke
+ *   transfer { token, amount: "OPEN", recipient } — creates the note settlement fills
+ *
+ * `${poolAddress}` and `${openNoteIds[0]}` are literal protocol placeholders the
+ * wallet substitutes. They must never be hex-normalised.
+ */
+
 import { constants as SNconstants, num } from "starknet";
 import type { WALLET_API } from "@starknet-io/types-js";
 import {
@@ -8,99 +25,107 @@ import {
   OP_REDEEM,
   POLICY_ADDRESS,
   STRK,
-  STRK20_MAINNET_POOL,
-  providers,
-  strkToWei,
-  TIERS,
+  isDeployed,
+  requireTier,
 } from "@/lib/config";
+import { CovertError, fail, normalizeError } from "@/lib/domain/errors";
+import { readTxOutcome, waitForTx, type TxOutcome } from "@/lib/chain/read";
 import { useWallet } from "@/lib/wallet/store";
-import type { LocalPolicyKey } from "./types";
+import type { PolicySecret } from "@/lib/domain/types";
 import { signClaimSubmission, signRedemption } from "./key";
 
+export type SubmitResult = {
+  txHash: string;
+  outcome: TxOutcome;
+};
+
 function requireConfigured() {
-  if (BigInt(POLICY_ADDRESS) === 0n || BigInt(ANONYMIZER_ADDRESS) === 0n) {
-    throw new Error("COVERT contracts are not configured. Deploy them and set the two NEXT_PUBLIC_COVERT_* addresses.");
-  }
+  if (!isDeployed()) fail("NOT_DEPLOYED");
 }
 
 function requireMainnet() {
-  const { chain } = useWallet.getState();
-  if (chain !== SNconstants.StarknetChainId.SN_MAIN) {
-    throw new Error("COVERT's competition build is mainnet-only. Switch the connected wallet to Starknet Mainnet.");
-  }
+  const { chain, connected } = useWallet.getState();
+  if (!connected) fail("NOT_CONNECTED");
+  if (chain !== SNconstants.StarknetChainId.SN_MAIN) fail("WRONG_NETWORK");
 }
 
-// The STRK20 wallet API rejects actions with typed codes (USER_REFUSED_OP,
-// INSUFFICIENT_PRIVATE_BALANCE, NOT_REGISTERED, ...). Map them to human
-// guidance so a wallet rejection is never mistaken for an onchain failure.
-function friendlyStrk20Error(e: unknown): Error {
-  const raw = e as { code?: unknown; message?: string } | undefined;
-  const code = String(raw?.code ?? "").toUpperCase();
-  const message = raw?.message ?? String(e);
-  const m = message.toUpperCase();
-  if (code.includes("INSUFFICIENT_PRIVATE_BALANCE") || m.includes("INSUFFICIENT_PRIVATE_BALANCE")) {
-    return new Error("Not enough shielded STRK for this action. Shield more, wait for note maturity, then retry.");
-  }
-  if (code.includes("USER_REFUSED_OP") || m.includes("USER_REFUSED_OP") || m.includes("USER REFUSED")) {
-    return new Error("The wallet rejected the transaction. Nothing was submitted.");
-  }
-  if (code.includes("NOT_REGISTERED") || m.includes("NOT_REGISTERED")) {
-    return new Error("This wallet is not registered in the STRK20 privacy pool. Make a shield deposit first.");
-  }
-  if (code.includes("API_VERSION_NOT_SUPPORTED") || m.includes("API_VERSION_NOT_SUPPORTED")) {
-    return new Error("This wallet's STRK20 Wallet API version is too old for COVERT (>= 0.10.3).");
-  }
-  if (code.includes("PRIVACY_LEAK") || m.includes("PRIVACY_LEAK")) {
-    return new Error("COVERT refused an action that would have leaked private state. Review and retry.");
-  }
-  if (code.includes("INSUFFICIENT_ACCOUNT_BALANCE") || code.includes("INSUFFICIENT_GAS") || m.includes("INSUFFICIENT_ACCOUNT_BALANCE") || m.includes("INSUFFICIENT GAS")) {
-    return new Error("The wallet account lacks STRK for gas/fees. Top up the public balance, then retry.");
-  }
-  return new Error(message);
+function walletAccount() {
+  const { walletAccount: account } = useWallet.getState();
+  if (!account) fail("NOT_CONNECTED");
+  return account;
 }
 
-async function boundedWait(tx: string) {
-  const { providerIndex } = useWallet.getState();
-  const wait = providers[providerIndex].waitForTransaction(tx, { retries: 60, retryInterval: 3000 });
-  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error(
-    "Transaction was submitted but did not appear at the RPC within 3 minutes. Keep the hash and check Voyager before retrying.",
-  )), 180_000));
-  await Promise.race([wait, timeout]);
-}
-
-async function submit(actions: WALLET_API.STRK20_ACTION[]) {
-  const { walletAccount } = useWallet.getState();
-  if (!walletAccount) throw new Error("Connect a privacy-capable Starknet wallet first.");
+/**
+ * Submit STRK20 actions and resolve the real result.
+ *
+ * A revert is returned rather than thrown, because a reverted settlement before
+ * approval is *evidence COVERT wants to keep*, not an error to swallow. Callers
+ * decide what a revert means for their step.
+ */
+async function submit(actions: WALLET_API.STRK20_ACTION[]): Promise<SubmitResult> {
   requireMainnet();
+  const account = walletAccount();
+  let txHash: string;
   try {
-    const result = await walletAccount.strk20InvokeTransaction(actions);
-    const tx = result.transaction_hash;
-    await boundedWait(tx);
-    return tx;
-  } catch (e) { throw friendlyStrk20Error(e); }
+    const result = await account.strk20InvokeTransaction(actions);
+    txHash = result.transaction_hash;
+  } catch (e) {
+    // Nothing was submitted: wallet refusal, insufficient private balance, etc.
+    const norm = normalizeError(e);
+    throw new CovertError(norm.code, norm.raw);
+  }
+  const outcome = await waitForTx(txHash);
+  return { txHash, outcome };
 }
 
-export async function shield(amountStrk: number) {
-  const actions: WALLET_API.STRK20_ACTION[] = [
-    { type: "deposit", token: STRK, amount: num.toHex(strkToWei(amountStrk)) },
-  ];
-  return submit(actions);
+async function submitPublic(
+  contractAddress: string,
+  entrypoint: string,
+  calldata: string[],
+): Promise<SubmitResult> {
+  requireMainnet();
+  const account = walletAccount();
+  let txHash: string;
+  try {
+    const result = await account.execute({ contractAddress, entrypoint, calldata });
+    txHash = result.transaction_hash as string;
+  } catch (e) {
+    const norm = normalizeError(e);
+    throw new CovertError(norm.code, norm.raw);
+  }
+  const outcome = await waitForTx(txHash);
+  return { txHash, outcome };
+}
+
+// ------------------------------------------------------------- funding ----
+
+/** Public shield deposit. COVERT never claims this step is private. */
+export async function shield(amountWei: bigint): Promise<SubmitResult> {
+  if (amountWei <= 0n) fail("BAD_AMOUNT", "Shield amount must be positive.");
+  return submit([{ type: "deposit", token: STRK, amount: num.toHex(amountWei) }]);
 }
 
 export async function privateBalances() {
-  const { walletAccount } = useWallet.getState();
-  if (!walletAccount) throw new Error("Connect a wallet first.");
   requireMainnet();
-  return walletAccount.strk20Balances([]);
+  return walletAccount().strk20Balances([]);
 }
 
+/**
+ * Pull the STRK private balance out of whatever shape the wallet returns.
+ * Wallet responses have varied during STRK20 development, so this walks the
+ * structure instead of assuming one layout. Returns null when absent — never 0,
+ * because "unknown" and "empty" must not look the same in the UI.
+ */
 export function extractStrkBalanceWei(input: unknown): bigint | null {
   const target = BigInt(STRK);
   const walk = (value: unknown): bigint | null => {
     if (value === null || value === undefined) return null;
     if (typeof value === "string" || typeof value === "number" || typeof value === "bigint") return null;
     if (Array.isArray(value)) {
-      for (const item of value) { const found = walk(item); if (found !== null) return found; }
+      for (const item of value) {
+        const found = walk(item);
+        if (found !== null) return found;
+      }
       return null;
     }
     if (typeof value === "object") {
@@ -108,11 +133,22 @@ export function extractStrkBalanceWei(input: unknown): bigint | null {
       const token = obj.token ?? obj.token_address ?? obj.tokenAddress;
       const amount = obj.balance ?? obj.amount ?? obj.value;
       try {
-        if (token !== undefined && BigInt(String(token)) === target && amount !== undefined) return BigInt(String(amount));
-      } catch { /* fall through */ }
+        if (token !== undefined && BigInt(String(token)) === target && amount !== undefined) {
+          return BigInt(String(amount));
+        }
+      } catch {
+        /* not a felt; keep walking */
+      }
       for (const [k, v] of Object.entries(obj)) {
-        try { if (BigInt(k) === target && (typeof v === "string" || typeof v === "number" || typeof v === "bigint")) return BigInt(v); } catch { /* ignore */ }
-        const found = walk(v); if (found !== null) return found;
+        try {
+          if (BigInt(k) === target && (typeof v === "string" || typeof v === "number" || typeof v === "bigint")) {
+            return BigInt(v);
+          }
+        } catch {
+          /* key is not a felt */
+        }
+        const found = walk(v);
+        if (found !== null) return found;
       }
     }
     return null;
@@ -120,36 +156,23 @@ export function extractStrkBalanceWei(input: unknown): bigint | null {
   return walk(input);
 }
 
-export async function privateStrkBalanceWei() {
-  return extractStrkBalanceWei(await privateBalances());
-}
-
-export async function currentBlockNumber() {
-  requireMainnet();
-  return providers[0].getBlockNumber();
-}
-
-export async function poolFeeWei(): Promise<bigint | null> {
+export async function privateStrkBalanceWei(): Promise<bigint | null> {
   try {
-    const result = await providers[0].callContract({
-      contractAddress: STRK20_MAINNET_POOL,
-      entrypoint: "get_fee_amount",
-      calldata: [],
-    });
-    return result[0] ? BigInt(result[0]) : null;
+    return extractStrkBalanceWei(await privateBalances());
   } catch {
-    // Fee view names have changed during STRK20 development. Never invent a value.
+    // A wallet that cannot answer must not block the flow; the UI shows "unknown".
     return null;
   }
 }
 
-export async function buyPolicy(key: LocalPolicyKey) {
+// -------------------------------------------------------------- policy ----
+
+/** Private policy purchase: withdraw the exact premium to the anonymizer, then invoke. */
+export async function buyPolicy(secret: PolicySecret): Promise<SubmitResult> {
   requireConfigured();
-  const tier = TIERS.find((x) => x.id === key.tier);
-  if (!tier) throw new Error("Unknown coverage tier.");
-  const premium = strkToWei(tier.premium);
-  const actions: WALLET_API.STRK20_ACTION[] = [
-    { type: "withdraw", token: STRK, amount: num.toHex(premium), recipient: ANONYMIZER_ADDRESS },
+  const t = requireTier(secret.tier);
+  return submit([
+    { type: "withdraw", token: STRK, amount: num.toHex(t.premiumWei), recipient: ANONYMIZER_ADDRESS },
     {
       type: "invoke",
       contract: ANONYMIZER_ADDRESS,
@@ -158,26 +181,32 @@ export async function buyPolicy(key: LocalPolicyKey) {
         STRK,
         "${poolAddress}",
         POLICY_ADDRESS,
-        key.commitment,
-        key.publicKey,
-        num.toHex(key.tier),
+        secret.commitment,
+        secret.publicKey,
+        num.toHex(secret.tier),
         "0x0",
         "0x0",
         "0x0",
       ],
     },
-  ];
-  return submit(actions);
+  ]);
 }
 
+/**
+ * Authenticated claim submission.
+ *
+ * A pure zero-value `invoke`: the pool's balance rule ends each token's temporary
+ * balance at zero, which a zero-value action satisfies trivially. That is why
+ * COVERT needs no claim bond and never routes around STRK20 with a public call.
+ */
 export async function submitClaim(
-  key: LocalPolicyKey,
+  secret: PolicySecret,
   claimCommitment: string,
   incidentHash: string,
-) {
+): Promise<SubmitResult> {
   requireConfigured();
-  const sig = signClaimSubmission(key, claimCommitment, incidentHash);
-  const actions: WALLET_API.STRK20_ACTION[] = [
+  const sig = signClaimSubmission(secret, claimCommitment, incidentHash);
+  return submit([
     {
       type: "invoke",
       contract: ANONYMIZER_ADDRESS,
@@ -186,7 +215,7 @@ export async function submitClaim(
         STRK,
         "${poolAddress}",
         POLICY_ADDRESS,
-        key.commitment,
+        secret.commitment,
         claimCommitment,
         incidentHash,
         sig.r,
@@ -194,19 +223,24 @@ export async function submitClaim(
         "0x0",
       ],
     },
-  ];
-  return submit(actions);
+  ]);
 }
 
-export async function redeemClaim(key: LocalPolicyKey, claimCommitment: string) {
+/**
+ * Private settlement.
+ *
+ * `transfer amount: "OPEN"` asks the pool to create an empty note; the anonymizer
+ * returns an `OpenNoteDeposit` that fills it. The payout therefore lands in the
+ * private balance, and the public address appears nowhere in the payout path.
+ */
+export async function redeemClaim(secret: PolicySecret, claimCommitment: string): Promise<SubmitResult> {
   requireConfigured();
-  const tier = TIERS.find((x) => x.id === key.tier);
-  if (!tier) throw new Error("Unknown coverage tier.");
-  const payout = strkToWei(tier.payout);
-  const sig = signRedemption(key, claimCommitment, payout);
+  requireTier(secret.tier);
+  const t = requireTier(secret.tier);
+  const sig = signRedemption(secret, claimCommitment, t.payoutWei);
   const { address } = useWallet.getState();
-  if (!address) throw new Error("Connect a wallet first.");
-  const actions: WALLET_API.STRK20_ACTION[] = [
+  if (!address) fail("NOT_CONNECTED");
+  return submit([
     { type: "transfer", token: STRK, amount: "OPEN", recipient: address },
     {
       type: "invoke",
@@ -216,7 +250,7 @@ export async function redeemClaim(key: LocalPolicyKey, claimCommitment: string) 
         STRK,
         "${poolAddress}",
         POLICY_ADDRESS,
-        key.commitment,
+        secret.commitment,
         claimCommitment,
         sig.r,
         sig.s,
@@ -224,89 +258,36 @@ export async function redeemClaim(key: LocalPolicyKey, claimCommitment: string) 
         "${openNoteIds[0]}",
       ],
     },
-  ];
-  return submit(actions);
-}
-
-export async function readAdjudicator() {
-  requireConfigured();
-  const result = await providers[0].callContract({
-    contractAddress: POLICY_ADDRESS,
-    entrypoint: "adjudicator",
-    calldata: [],
-  });
-  return result[0] ?? "0x0";
-}
-
-export async function readReserveState() {
-  requireConfigured();
-  const [reserveResult, exposureResult, invokeResult] = await Promise.all([
-    providers[0].callContract({ contractAddress: POLICY_ADDRESS, entrypoint: "reserve", calldata: [] }),
-    providers[0].callContract({ contractAddress: POLICY_ADDRESS, entrypoint: "exposure", calldata: [] }),
-    providers[0].callContract({ contractAddress: ANONYMIZER_ADDRESS, entrypoint: "invoke_count", calldata: [] }),
   ]);
-  return {
-    reserve: BigInt(reserveResult[0] ?? "0x0"),
-    exposure: BigInt(exposureResult[0] ?? "0x0"),
-    invokes: BigInt(invokeResult[0] ?? "0x0"),
-  };
 }
 
-export async function readClaimState(claimCommitment: string) {
+// ---------------------------------------------------------- adjudication ----
+
+export async function approveClaim(claimCommitment: string): Promise<SubmitResult> {
   requireConfigured();
-  const result = await providers[0].callContract({
-    contractAddress: POLICY_ADDRESS,
-    entrypoint: "claim_state",
-    calldata: [claimCommitment],
-  });
-  return {
-    exists: BigInt(result[0] ?? "0x0") !== 0n,
-    policyCommitment: result[1] ?? "0x0",
-    incidentHash: result[2] ?? "0x0",
-    decision: Number(BigInt(result[3] ?? "0x0")),
-    redeemed: BigInt(result[4] ?? "0x0") !== 0n,
-  };
+  return submitPublic(POLICY_ADDRESS, "approve_claim", [claimCommitment]);
 }
 
-export async function readPolicyState(policyCommitment: string) {
+export async function denyClaim(claimCommitment: string): Promise<SubmitResult> {
   requireConfigured();
-  const result = await providers[0].callContract({
-    contractAddress: POLICY_ADDRESS,
-    entrypoint: "policy_state",
-    calldata: [policyCommitment],
-  });
-  return {
-    exists: BigInt(result[0] ?? "0x0") !== 0n,
-    tier: Number(BigInt(result[1] ?? "0x0")),
-    ownerKey: result[2] ?? "0x0",
-    expiry: Number(BigInt(result[3] ?? "0x0")),
-    active: BigInt(result[4] ?? "0x0") !== 0n,
-    claimed: BigInt(result[5] ?? "0x0") !== 0n,
-    hasClaim: BigInt(result[6] ?? "0x0") !== 0n,
-  };
+  return submitPublic(POLICY_ADDRESS, "deny_claim", [claimCommitment]);
 }
 
-async function publicPolicyAction(entrypoint: "approve_claim" | "deny_claim", claimCommitment: string) {
+// -------------------------------------------------------------- upkeep ----
+
+/** Release exposure for a policy whose term has ended. Permissionless. */
+export async function expirePolicy(policyCommitment: string): Promise<SubmitResult> {
   requireConfigured();
-  requireMainnet();
-  const { walletAccount } = useWallet.getState();
-  if (!walletAccount) throw new Error("Connect the adjudicator wallet first.");
-  try {
-    const result = await walletAccount.execute({
-      contractAddress: POLICY_ADDRESS,
-      entrypoint,
-      calldata: [claimCommitment],
-    });
-    const tx = result.transaction_hash as string;
-    await boundedWait(tx);
-    return tx;
-  } catch (e) { throw friendlyStrk20Error(e); }
+  return submitPublic(POLICY_ADDRESS, "expire_policy", [policyCommitment]);
 }
 
-export async function approveClaim(claimCommitment: string) {
-  return publicPolicyAction("approve_claim", claimCommitment);
+/** Close a claim the adjudicator abandoned past its deadline. Permissionless. */
+export async function expireStaleClaim(claimCommitment: string): Promise<SubmitResult> {
+  requireConfigured();
+  return submitPublic(POLICY_ADDRESS, "expire_stale_claim", [claimCommitment]);
 }
 
-export async function denyClaim(claimCommitment: string) {
-  return publicPolicyAction("deny_claim", claimCommitment);
+/** Re-read an existing hash without resubmitting anything. */
+export async function checkTx(hash: string): Promise<TxOutcome> {
+  return readTxOutcome(hash);
 }

@@ -15,3 +15,12 @@ AGENTS.md
 CLAUDE.md
 design-preview.html
 .vercel
+
+# Test output
+/test-results
+/playwright-report
+/blob-report
+/playwright/.cache
+
+# Local agent/editor tooling
+.claude

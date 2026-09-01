@@ -5,8 +5,12 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 echo "== npm typecheck =="
 (cd "${ROOT_DIR}" && npm run typecheck)
+echo "== npm test (domain) =="
+(cd "${ROOT_DIR}" && npm test)
 echo "== npm build =="
 (cd "${ROOT_DIR}" && npm run build)
+echo "== npm run test:e2e (browser lifecycle) =="
+(cd "${ROOT_DIR}" && npm run test:e2e)
 echo "== npm forge:code =="
 (cd "${ROOT_DIR}" && npm run forge:code)
 echo "== scarb build =="

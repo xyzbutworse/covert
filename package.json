@@ -8,7 +8,13 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "evidence": "node scripts/validate-strk20.mjs",
-    "forge:code": "node scripts/forge-code-gate.mjs"
+    "forge:code": "node scripts/forge-code-gate.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "lifecycle": "node scripts/devnet/run-lifecycle.mjs",
+    "verify": "node scripts/verify-lifecycle.mjs",
+    "ledger": "node scripts/build-claim-ledger.mjs --run-tests"
   },
   "dependencies": {
     "@starknet-io/get-starknet-discovery": "6.0.3",
@@ -20,10 +26,13 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@starknet-io/types-js": "0.10.3",
     "@types/node": "24.10.2",
     "@types/react": "19.2.7",
-    "typescript": "^5.9.3"
+    "@vitest/coverage-v8": "^4.1.11",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
   },
   "overrides": {
     "@starknet-io/get-starknet-wallet-standard-v6": "npm:@starknet-io/get-starknet-wallet-standard@6.0.3"

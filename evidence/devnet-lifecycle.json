@@ -1,0 +1,648 @@
+{
+  "schema": "covert.lifecycle.v1",
+  "kind": "DEVNET_EXECUTION",
+  "disclaimer": "Real transactions executed against a local starknet-devnet node, not Starknet Mainnet. The STRK20 pool is represented by MockStrk20Pool, which reproduces the pool's calling pattern but none of its privacy construction. COVERT's own contracts are the mainnet ones.",
+  "capturedAt": "2026-09-01T15:53:16.450Z",
+  "network": {
+    "rpc": "http://127.0.0.1:5050",
+    "chainId": "0x534e5f5345504f4c4941",
+    "specVersion": "0.10.2",
+    "name": "starknet-devnet"
+  },
+  "contracts": {
+    "policy": "0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd",
+    "anonymizer": "0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d",
+    "poolStub": "0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e",
+    "strk": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+    "classHashes": {
+      "policy": "0x18b68b6b3dfeb7f836ce404f6dc7a4921808faffb9c81cac73672ec2f62dd3",
+      "anonymizer": "0x7fc2600c5d4763acdb7711454c633e7ae97e730d9908b86b13442c0ca6fb5e8",
+      "poolStub": "0x3fccb8158570e99c2bb2a2069576d3d23702a3e0be16f5514f164876f676dee"
+    }
+  },
+  "roles": {
+    "owner": "0x034ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba",
+    "adjudicator": "0x02939f2dc3f80cc7d620e8a86f2e69c1e187b7ff44b74056647368b5c49dc370",
+    "holder": "0x025a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77"
+  },
+  "policy": {
+    "commitment": "0x33ea1c0803930a36d75f7bdffc62840a90521e6ffac5034bfa0bcaec0274669",
+    "publicKey": "0x24a23459ce593354f923ae4fe8ce78a70ff731e9e1698c97d2d094067d4ee31",
+    "tier": 1,
+    "premiumWei": "10000000000000000",
+    "payoutWei": "50000000000000000",
+    "termSeconds": 604800,
+    "expiry": 1788882746
+  },
+  "claim": {
+    "commitment": "0x656cca156a9ffaf27e7a84e1fff209a6d859ccaaf3b7ca6920889efb819e036",
+    "incidentHash": "0x5efa296f531a6c5f82f7f6df819815704ebf3e94d703d87ae1d3e99f0ef2447",
+    "incidentText": "sequencer outage suspended settlement for 41 minutes",
+    "incidentSalt": "0x2e58598e520df6963b322d47358d4490fc5c9c1364824e255136adc17a554e5"
+  },
+  "balances": {
+    "publicAtStart": "998958488223958495200",
+    "publicBeforeSettlement": "998443080335943089840",
+    "publicAfterSettlement": "998437732335937742800",
+    "settlementFeeWei": "5348000005347040",
+    "payoutCreditedToPublicWallet": "0",
+    "privateAfterShield": "500000000000000000",
+    "privateBeforeSettlement": "490000000000000000",
+    "privateAfterSettlement": "540000000000000000",
+    "privateDelta": "50000000000000000"
+  },
+  "reserve": {
+    "beforeWei": "1010000000000000000",
+    "afterWei": "960000000000000000",
+    "exposureBeforeWei": "50000000000000000",
+    "exposureAfterWei": "0"
+  },
+  "settlementRoute": {
+    "strkTransfers": [
+      {
+        "from": "0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd",
+        "to": "0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d",
+        "amountWei": "50000000000000000"
+      },
+      {
+        "from": "0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d",
+        "to": "0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e",
+        "amountWei": "50000000000000000"
+      },
+      {
+        "from": "0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77",
+        "to": "0x1000",
+        "amountWei": "5348000005347040"
+      }
+    ],
+    "transfersToPublicWallet": [],
+    "transfersFromPublicWallet": [
+      {
+        "from": "0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77",
+        "to": "0x1000",
+        "amountWei": "5348000005347040"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "SETUP-01",
+      "title": "Pin the anonymizer (one-time)",
+      "expectRevert": null,
+      "txHash": "0x20b29d6e2d71dc4ead55d0247bda2ec9ecc79fd712325425b7ca3be30f112a2",
+      "blockNumber": 34,
+      "actualFee": "0x72929b8747fe0",
+      "events": [
+        {
+          "from": "0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd",
+          "keys": [
+            "0xe495acf399998e4b3ede3742fe8a96df2bf36381769dff416241cb03e04a7"
+          ],
+          "data": [
+            "0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d"
+          ]
+        },
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9",
+            "0x34ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba",
+            "0x1000"
+          ],
+          "data": [
+            "0x72929b8747fe0",
+            "0x0"
+          ]
+        }
+      ],
+      "status": "succeeded",
+      "durationMs": 10018
+    },
+    {
+      "id": "SETUP-02",
+      "title": "Fund the proof reserve",
+      "expectRevert": null,
+      "txHash": "0x3d928af5b8f98d8d8c13c84482c3354b5a31e03ab8d1784856757d662ecd7aa",
+      "blockNumber": 35,
+      "actualFee": "0xb6b64784fca60",
+      "events": [
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x134692b230b9e1ffa39098904722134159652b09c5bc41d88d6698779d228ff",
+            "0x34ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba",
+            "0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd"
+          ],
+          "data": [
+            "0xde0b6b3a7640000",
+            "0x0"
+          ]
+        },
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x134692b230b9e1ffa39098904722134159652b09c5bc41d88d6698779d228ff",
+            "0x34ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba",
+            "0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd"
+          ],
+          "data": [
+            "0x0",
+            "0x0"
+          ]
+        },
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9",
+            "0x34ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba",
+            "0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd"
+          ],
+          "data": [
+            "0xde0b6b3a7640000",
+            "0x0"
+          ]
+        },
+        {
+          "from": "0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd",
+          "keys": [
+            "0x186cefce69b11a091d6b0cd0fac88b913b4fdf437beac088a5c485229f6b6d1"
+          ],
+          "data": [
+            "0xde0b6b3a7640000",
+            "0xde0b6b3a7640000"
+          ]
+        },
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9",
+            "0x34ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba",
+            "0x1000"
+          ],
+          "data": [
+            "0xb6b64784fca60",
+            "0x0"
+          ]
+        }
+      ],
+      "status": "succeeded",
+      "durationMs": 10031
+    },
+    {
+      "id": "NEG-01",
+      "title": "Re-configure the anonymizer",
+      "expectRevert": "ALREADY_CONFIGURED",
+      "status": "rejected",
+      "revertReason": "RPC: starknet_estimateFee with params {\n  \"request\": [\n    {\n      \"type\": \"INVOKE\",\n      \"sender_address\": \"0x034ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba\",\n      \"calldata\": [\n        \"0x1\",\n        \"0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd\",\n        \"0x3b53df95f5c1385a760a6ca8e402406a6fb7026c3ee71ab4469894a129e5efe\",\n        \"0x1\",\n        \"0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d\"\n      ],\n      \"signature\": [],\n      \"nonce\": \"0x19\",\n      \"resource_bounds\": {\n        \"l2_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        },\n        \"l1_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        },\n        \"l1_data_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        }\n      },\n      \"tip\": \"0x1\",\n      \"paymaster_data\": [],\n      \"nonce_data_availability_mode\": \"L1\",\n      \"fee_data_availability_mode\": \"L1\",\n      \"account_deployment_data\": [],\n      \"version\": \"0x100000000000000000000000000000003\"\n    }\n  ],\n  \"block_id\": \"latest\",\n  \"simulation_flags\": [\n    \"SKIP_VALIDATE\"\n  ]\n}\n\n      41: Transaction execution error: {\"transaction_index\":0,\"execution_error\":{\"contract_address\":\"0x34ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba\",\"class_hash\":\"0x5b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564\",\"selector\":\"0x15d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad\",\"error\":{\"contract_address\":\"0x34ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba\",\"class_hash\":\"0x5b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564\",\"selector\":\"0x15d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad\",\"error\":{\"contract_address\":\"0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd\",\"class_hash\":\"0x18b68b6b3dfeb7f836ce404f6dc7a4921808faffb9c81cac73672ec2f62dd3\",\"selector\":\"0x3b53df95f5c1385a760a6ca8e402406a6fb7026c3ee71ab4469894a129e5efe\",\"error\":\"Transaction execution has failed:\\n0: Error in the called contract (contract address: 0x034ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba, class hash: 0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564, selector: 0x015d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad):\\nExecution failed. Failure reason:\\nError in contract (contract address: 0x034ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba, class hash: 0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564, selector: 0x015d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad):\\nError in contract (contract address: 0x06d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd, class hash: 0x0018b68b6b3dfeb7f836ce404f6dc7a4921808faffb9c81cac73672ec2f62dd3, selector: 0x03b53df95f5c1385a760a6ca8e402406a6fb7026c3ee71ab4469894a129e5efe):\\n0x414c52454144595f434f4e46494755524544 ('ALREADY_CONFIGURED').\\n [\\\"0x414c52454144595f434f4e46494755524544\\\"]\"}}}}",
+      "matchedExpectation": true,
+      "durationMs": 9
+    },
+    {
+      "id": "TX-00",
+      "title": "Shield STRK into the pool (public by design)",
+      "expectRevert": null,
+      "txHash": "0x1fc07e8e908ca3095a5c8426f1b6da9c3d612cacbf086e80ded0d2fa963d95b",
+      "blockNumber": 36,
+      "actualFee": "0xb50536e14d620",
+      "events": [
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x134692b230b9e1ffa39098904722134159652b09c5bc41d88d6698779d228ff",
+            "0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77",
+            "0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e"
+          ],
+          "data": [
+            "0x6f05b59d3b20000",
+            "0x0"
+          ]
+        },
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x134692b230b9e1ffa39098904722134159652b09c5bc41d88d6698779d228ff",
+            "0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77",
+            "0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e"
+          ],
+          "data": [
+            "0x0",
+            "0x0"
+          ]
+        },
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9",
+            "0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77",
+            "0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e"
+          ],
+          "data": [
+            "0x6f05b59d3b20000",
+            "0x0"
+          ]
+        },
+        {
+          "from": "0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e",
+          "keys": [
+            "0x3905e8c1752e2e2f768e4ed493f6d4df0bcaaf86ad37ef5bc7c2bbf18fe8083",
+            "0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77"
+          ],
+          "data": [
+            "0x6f05b59d3b20000",
+            "0x6f05b59d3b20000"
+          ]
+        },
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9",
+            "0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77",
+            "0x1000"
+          ],
+          "data": [
+            "0xb50536e14d620",
+            "0x0"
+          ]
+        }
+      ],
+      "status": "succeeded",
+      "durationMs": 10052
+    },
+    {
+      "id": "TX-01",
+      "title": "Activate cover privately (pool → anonymizer → policy)",
+      "expectRevert": null,
+      "txHash": "0x14e166883a5e098ca8fd126faba8baca6c72bd51f7821bd53786a3bc6846136",
+      "blockNumber": 37,
+      "actualFee": "0x19fa6a18ccae70",
+      "events": [
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9",
+            "0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e",
+            "0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d"
+          ],
+          "data": [
+            "0x2386f26fc10000",
+            "0x0"
+          ]
+        },
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x134692b230b9e1ffa39098904722134159652b09c5bc41d88d6698779d228ff",
+            "0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d",
+            "0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd"
+          ],
+          "data": [
+            "0x2386f26fc10000",
+            "0x0"
+          ]
+        },
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x134692b230b9e1ffa39098904722134159652b09c5bc41d88d6698779d228ff",
+            "0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d",
+            "0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd"
+          ],
+          "data": [
+            "0x0",
+            "0x0"
+          ]
+        },
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9",
+            "0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d",
+            "0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd"
+          ],
+          "data": [
+            "0x2386f26fc10000",
+            "0x0"
+          ]
+        },
+        {
+          "from": "0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd",
+          "keys": [
+            "0x33a054551230f8149e00c07d313e63229d561b7d3bef48314608c6061e8139e",
+            "0x33ea1c0803930a36d75f7bdffc62840a90521e6ffac5034bfa0bcaec0274669"
+          ],
+          "data": [
+            "0x1",
+            "0x6aa02f3a",
+            "0xb1a2bc2ec50000"
+          ]
+        },
+        {
+          "from": "0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d",
+          "keys": [
+            "0x36d6eb68ace2acc34b9ed00546588ecbcf58d4ce37d25309e07d2b2470b4ae5",
+            "0x1",
+            "0x33ea1c0803930a36d75f7bdffc62840a90521e6ffac5034bfa0bcaec0274669"
+          ],
+          "data": [
+            "0x2386f26fc10000"
+          ]
+        },
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9",
+            "0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77",
+            "0x1000"
+          ],
+          "data": [
+            "0x19fa6a18ccae70",
+            "0x0"
+          ]
+        }
+      ],
+      "status": "succeeded",
+      "durationMs": 10029
+    },
+    {
+      "id": "NEG-02",
+      "title": "Re-use the same policy commitment",
+      "expectRevert": "POLICY_EXISTS",
+      "status": "rejected",
+      "revertReason": "RPC: starknet_estimateFee with params {\n  \"request\": [\n    {\n      \"type\": \"INVOKE\",\n      \"sender_address\": \"0x025a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77\",\n      \"calldata\": [\n        \"0x1\",\n        \"0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e\",\n        \"0x21f2472b7b40da83e888bc4a8996a325b2f18c5ecb114b95b229ff7272ebad6\",\n        \"0x6\",\n        \"0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d\",\n        \"0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd\",\n        \"0x33ea1c0803930a36d75f7bdffc62840a90521e6ffac5034bfa0bcaec0274669\",\n        \"0x24a23459ce593354f923ae4fe8ce78a70ff731e9e1698c97d2d094067d4ee31\",\n        \"0x1\",\n        \"0x2386f26fc10000\"\n      ],\n      \"signature\": [],\n      \"nonce\": \"0xa\",\n      \"resource_bounds\": {\n        \"l2_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        },\n        \"l1_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        },\n        \"l1_data_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        }\n      },\n      \"tip\": \"0x1\",\n      \"paymaster_data\": [],\n      \"nonce_data_availability_mode\": \"L1\",\n      \"fee_data_availability_mode\": \"L1\",\n      \"account_deployment_data\": [],\n      \"version\": \"0x100000000000000000000000000000003\"\n    }\n  ],\n  \"block_id\": \"latest\",\n  \"simulation_flags\": [\n    \"SKIP_VALIDATE\"\n  ]\n}\n\n      41: Transaction execution error: {\"transaction_index\":0,\"execution_error\":{\"contract_address\":\"0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77\",\"class_hash\":\"0x5b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564\",\"selector\":\"0x15d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad\",\"error\":{\"contract_address\":\"0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77\",\"class_hash\":\"0x5b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564\",\"selector\":\"0x15d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad\",\"error\":{\"contract_address\":\"0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e\",\"class_hash\":\"0x3fccb8158570e99c2bb2a2069576d3d23702a3e0be16f5514f164876f676dee\",\"selector\":\"0x21f2472b7b40da83e888bc4a8996a325b2f18c5ecb114b95b229ff7272ebad6\",\"error\":{\"contract_address\":\"0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d\",\"class_hash\":\"0x7fc2600c5d4763acdb7711454c633e7ae97e730d9908b86b13442c0ca6fb5e8\",\"selector\":\"0x402925cce9218828b3ac9a72ac249103f8448a1e1d73c3efaf5da992625043\",\"error\":{\"contract_address\":\"0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd\",\"class_hash\":\"0x18b68b6b3dfeb7f836ce404f6dc7a4921808faffb9c81cac73672ec2f62dd3\",\"selector\":\"0x3756f09a97d0fff87ba7f3903acfe1ff4ef98672160d718e47dc8fdb8c83e2b\",\"error\":\"Transaction execution has failed:\\n0: Error in the called contract (contract address: 0x025a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77, class hash: 0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564, selector: 0x015d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad):\\nExecution failed. Failure reason:\\nError in contract (contract address: 0x025a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77, class hash: 0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564, selector: 0x015d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad):\\nError in contract (contract address: 0x03aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e, class hash: 0x03fccb8158570e99c2bb2a2069576d3d23702a3e0be16f5514f164876f676dee, selector: 0x021f2472b7b40da83e888bc4a8996a325b2f18c5ecb114b95b229ff7272ebad6):\\nError in contract (contract address: 0x0446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d, class hash: 0x07fc2600c5d4763acdb7711454c633e7ae97e730d9908b86b13442c0ca6fb5e8, selector: 0x00402925cce9218828b3ac9a72ac249103f8448a1e1d73c3efaf5da992625043):\\nError in contract (contract address: 0x06d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd, class hash: 0x0018b68b6b3dfeb7f836ce404f6dc7a4921808faffb9c81cac73672ec2f62dd3, selector: 0x03756f09a97d0fff87ba7f3903acfe1ff4ef98672160d718e47dc8fdb8c83e2b):\\n0x504f4c4943595f455849535453 ('POLICY_EXISTS').\\n [\\\"0x504f4c4943595f455849535453\\\"]\"}}}}}}",
+      "matchedExpectation": true,
+      "durationMs": 8
+    },
+    {
+      "id": "TX-02",
+      "title": "File the authenticated claim",
+      "expectRevert": null,
+      "txHash": "0x501ea7e034215349509fac98e63bea1a40adb0bd9d69375c34ae66f345533e0",
+      "blockNumber": 38,
+      "actualFee": "0x1172a6f5042ca0",
+      "events": [
+        {
+          "from": "0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd",
+          "keys": [
+            "0x84f17265c2b9907a9f0c4457045c968831df4b26e6f322144742211c929fe6",
+            "0x656cca156a9ffaf27e7a84e1fff209a6d859ccaaf3b7ca6920889efb819e036",
+            "0x33ea1c0803930a36d75f7bdffc62840a90521e6ffac5034bfa0bcaec0274669"
+          ],
+          "data": [
+            "0x5efa296f531a6c5f82f7f6df819815704ebf3e94d703d87ae1d3e99f0ef2447"
+          ]
+        },
+        {
+          "from": "0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d",
+          "keys": [
+            "0x36d6eb68ace2acc34b9ed00546588ecbcf58d4ce37d25309e07d2b2470b4ae5",
+            "0x2",
+            "0x656cca156a9ffaf27e7a84e1fff209a6d859ccaaf3b7ca6920889efb819e036"
+          ],
+          "data": [
+            "0x0"
+          ]
+        },
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9",
+            "0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77",
+            "0x1000"
+          ],
+          "data": [
+            "0x1172a6f5042ca0",
+            "0x0"
+          ]
+        }
+      ],
+      "status": "succeeded",
+      "durationMs": 10025
+    },
+    {
+      "id": "NEG-03",
+      "title": "File a second claim with a forged bearer signature",
+      "expectRevert": "POLICY_HAS_CLAIM",
+      "status": "rejected",
+      "revertReason": "RPC: starknet_estimateFee with params {\n  \"request\": [\n    {\n      \"type\": \"INVOKE\",\n      \"sender_address\": \"0x025a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77\",\n      \"calldata\": [\n        \"0x1\",\n        \"0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e\",\n        \"0x136241a4a46a5fbe032f281e6a9a658bb6aaac1c544c2cead8615c638ccabe7\",\n        \"0x7\",\n        \"0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d\",\n        \"0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd\",\n        \"0x33ea1c0803930a36d75f7bdffc62840a90521e6ffac5034bfa0bcaec0274669\",\n        \"0x74d0aad603ff7fb89f61d5751101d5c81248ab343190fb1f3cd7e3aa4ad0aee\",\n        \"0x7e4dc1348709b08d1b2c677721f4a1cd8e695395c748bedbe7a7d2d73530275\",\n        \"0x4ff21424fd3335626f42d8a7b36289ef9eb2831e70e8d97036a86e9db1c90ea\",\n        \"0x318208256d3fdc3a6865a5183e163fe245cedb83c25d53dcdd2a09f19330a8a\"\n      ],\n      \"signature\": [],\n      \"nonce\": \"0xb\",\n      \"resource_bounds\": {\n        \"l2_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        },\n        \"l1_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        },\n        \"l1_data_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        }\n      },\n      \"tip\": \"0x1\",\n      \"paymaster_data\": [],\n      \"nonce_data_availability_mode\": \"L1\",\n      \"fee_data_availability_mode\": \"L1\",\n      \"account_deployment_data\": [],\n      \"version\": \"0x100000000000000000000000000000003\"\n    }\n  ],\n  \"block_id\": \"latest\",\n  \"simulation_flags\": [\n    \"SKIP_VALIDATE\"\n  ]\n}\n\n      41: Transaction execution error: {\"transaction_index\":0,\"execution_error\":{\"contract_address\":\"0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77\",\"class_hash\":\"0x5b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564\",\"selector\":\"0x15d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad\",\"error\":{\"contract_address\":\"0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77\",\"class_hash\":\"0x5b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564\",\"selector\":\"0x15d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad\",\"error\":{\"contract_address\":\"0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e\",\"class_hash\":\"0x3fccb8158570e99c2bb2a2069576d3d23702a3e0be16f5514f164876f676dee\",\"selector\":\"0x136241a4a46a5fbe032f281e6a9a658bb6aaac1c544c2cead8615c638ccabe7\",\"error\":{\"contract_address\":\"0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d\",\"class_hash\":\"0x7fc2600c5d4763acdb7711454c633e7ae97e730d9908b86b13442c0ca6fb5e8\",\"selector\":\"0x402925cce9218828b3ac9a72ac249103f8448a1e1d73c3efaf5da992625043\",\"error\":{\"contract_address\":\"0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd\",\"class_hash\":\"0x18b68b6b3dfeb7f836ce404f6dc7a4921808faffb9c81cac73672ec2f62dd3\",\"selector\":\"0x21fd5a9001f3cfdb4784355fbcc879d5fa047735917bb91c55cd4c1e838825e\",\"error\":\"Transaction execution has failed:\\n0: Error in the called contract (contract address: 0x025a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77, class hash: 0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564, selector: 0x015d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad):\\nExecution failed. Failure reason:\\nError in contract (contract address: 0x025a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77, class hash: 0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564, selector: 0x015d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad):\\nError in contract (contract address: 0x03aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e, class hash: 0x03fccb8158570e99c2bb2a2069576d3d23702a3e0be16f5514f164876f676dee, selector: 0x0136241a4a46a5fbe032f281e6a9a658bb6aaac1c544c2cead8615c638ccabe7):\\nError in contract (contract address: 0x0446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d, class hash: 0x07fc2600c5d4763acdb7711454c633e7ae97e730d9908b86b13442c0ca6fb5e8, selector: 0x00402925cce9218828b3ac9a72ac249103f8448a1e1d73c3efaf5da992625043):\\nError in contract (contract address: 0x06d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd, class hash: 0x0018b68b6b3dfeb7f836ce404f6dc7a4921808faffb9c81cac73672ec2f62dd3, selector: 0x021fd5a9001f3cfdb4784355fbcc879d5fa047735917bb91c55cd4c1e838825e):\\n0x504f4c4943595f4841535f434c41494d ('POLICY_HAS_CLAIM').\\n [\\\"0x504f4c4943595f4841535f434c41494d\\\"]\"}}}}}}",
+      "matchedExpectation": true,
+      "durationMs": 8
+    },
+    {
+      "id": "NEG-04",
+      "title": "Settle BEFORE the adjudicator has approved",
+      "expectRevert": "NOT_APPROVED",
+      "status": "rejected",
+      "revertReason": "RPC: starknet_estimateFee with params {\n  \"request\": [\n    {\n      \"type\": \"INVOKE\",\n      \"sender_address\": \"0x025a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77\",\n      \"calldata\": [\n        \"0x1\",\n        \"0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e\",\n        \"0x3ed4f93062c06adeeeda8872b25d001ffa93a3ef70fe795ef9ddf03c9a1c8ee\",\n        \"0x7\",\n        \"0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d\",\n        \"0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd\",\n        \"0x33ea1c0803930a36d75f7bdffc62840a90521e6ffac5034bfa0bcaec0274669\",\n        \"0x656cca156a9ffaf27e7a84e1fff209a6d859ccaaf3b7ca6920889efb819e036\",\n        \"0x2effe78bf46926df83427f8b69af9a684393f390d77f2f46621836d03e02ade\",\n        \"0x2e5d94ec790e81ad214959fd67d421412575fb868fb8bfa1c97aaf536c9eabb\",\n        \"0x4e4f544531\"\n      ],\n      \"signature\": [],\n      \"nonce\": \"0xb\",\n      \"resource_bounds\": {\n        \"l2_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        },\n        \"l1_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        },\n        \"l1_data_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        }\n      },\n      \"tip\": \"0x1\",\n      \"paymaster_data\": [],\n      \"nonce_data_availability_mode\": \"L1\",\n      \"fee_data_availability_mode\": \"L1\",\n      \"account_deployment_data\": [],\n      \"version\": \"0x100000000000000000000000000000003\"\n    }\n  ],\n  \"block_id\": \"latest\",\n  \"simulation_flags\": [\n    \"SKIP_VALIDATE\"\n  ]\n}\n\n      41: Transaction execution error: {\"transaction_index\":0,\"execution_error\":{\"contract_address\":\"0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77\",\"class_hash\":\"0x5b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564\",\"selector\":\"0x15d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad\",\"error\":{\"contract_address\":\"0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77\",\"class_hash\":\"0x5b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564\",\"selector\":\"0x15d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad\",\"error\":{\"contract_address\":\"0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e\",\"class_hash\":\"0x3fccb8158570e99c2bb2a2069576d3d23702a3e0be16f5514f164876f676dee\",\"selector\":\"0x3ed4f93062c06adeeeda8872b25d001ffa93a3ef70fe795ef9ddf03c9a1c8ee\",\"error\":{\"contract_address\":\"0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d\",\"class_hash\":\"0x7fc2600c5d4763acdb7711454c633e7ae97e730d9908b86b13442c0ca6fb5e8\",\"selector\":\"0x402925cce9218828b3ac9a72ac249103f8448a1e1d73c3efaf5da992625043\",\"error\":{\"contract_address\":\"0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd\",\"class_hash\":\"0x18b68b6b3dfeb7f836ce404f6dc7a4921808faffb9c81cac73672ec2f62dd3\",\"selector\":\"0x29e42fe1c00b3f3fd148964a5a490d8054f9b9984f7f564e609bac90495f8cd\",\"error\":\"Transaction execution has failed:\\n0: Error in the called contract (contract address: 0x025a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77, class hash: 0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564, selector: 0x015d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad):\\nExecution failed. Failure reason:\\nError in contract (contract address: 0x025a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77, class hash: 0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564, selector: 0x015d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad):\\nError in contract (contract address: 0x03aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e, class hash: 0x03fccb8158570e99c2bb2a2069576d3d23702a3e0be16f5514f164876f676dee, selector: 0x03ed4f93062c06adeeeda8872b25d001ffa93a3ef70fe795ef9ddf03c9a1c8ee):\\nError in contract (contract address: 0x0446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d, class hash: 0x07fc2600c5d4763acdb7711454c633e7ae97e730d9908b86b13442c0ca6fb5e8, selector: 0x00402925cce9218828b3ac9a72ac249103f8448a1e1d73c3efaf5da992625043):\\nError in contract (contract address: 0x06d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd, class hash: 0x0018b68b6b3dfeb7f836ce404f6dc7a4921808faffb9c81cac73672ec2f62dd3, selector: 0x029e42fe1c00b3f3fd148964a5a490d8054f9b9984f7f564e609bac90495f8cd):\\n0x4e4f545f415050524f564544 ('NOT_APPROVED').\\n [\\\"0x4e4f545f415050524f564544\\\"]\"}}}}}}",
+      "matchedExpectation": true,
+      "durationMs": 3
+    },
+    {
+      "id": "TX-DEC",
+      "title": "Adjudicator approves the claim",
+      "expectRevert": null,
+      "txHash": "0x1e77fd78832241ff08693de7e33d2aade8c47feac67a3e639d12826956f3f3e",
+      "blockNumber": 39,
+      "actualFee": "0x5c96dba87b990",
+      "events": [
+        {
+          "from": "0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd",
+          "keys": [
+            "0x1733e2092b71999a2fbd2e6711c73e897a2fabe7dea6708efe96faa5287ce88",
+            "0x656cca156a9ffaf27e7a84e1fff209a6d859ccaaf3b7ca6920889efb819e036",
+            "0x33ea1c0803930a36d75f7bdffc62840a90521e6ffac5034bfa0bcaec0274669"
+          ],
+          "data": []
+        },
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9",
+            "0x2939f2dc3f80cc7d620e8a86f2e69c1e187b7ff44b74056647368b5c49dc370",
+            "0x1000"
+          ],
+          "data": [
+            "0x5c96dba87b990",
+            "0x0"
+          ]
+        }
+      ],
+      "status": "succeeded",
+      "durationMs": 10038
+    },
+    {
+      "id": "NEG-05",
+      "title": "Owner attempts to approve a claim",
+      "expectRevert": "NOT_ADJUDICATOR",
+      "status": "rejected",
+      "revertReason": "RPC: starknet_estimateFee with params {\n  \"request\": [\n    {\n      \"type\": \"INVOKE\",\n      \"sender_address\": \"0x034ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba\",\n      \"calldata\": [\n        \"0x1\",\n        \"0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd\",\n        \"0x2526ed064b11cc6fba5c5fd905d60d0585fd570250ddd238765f5acc3f0b94e\",\n        \"0x1\",\n        \"0x656cca156a9ffaf27e7a84e1fff209a6d859ccaaf3b7ca6920889efb819e036\"\n      ],\n      \"signature\": [],\n      \"nonce\": \"0x19\",\n      \"resource_bounds\": {\n        \"l2_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        },\n        \"l1_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        },\n        \"l1_data_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        }\n      },\n      \"tip\": \"0x1\",\n      \"paymaster_data\": [],\n      \"nonce_data_availability_mode\": \"L1\",\n      \"fee_data_availability_mode\": \"L1\",\n      \"account_deployment_data\": [],\n      \"version\": \"0x100000000000000000000000000000003\"\n    }\n  ],\n  \"block_id\": \"latest\",\n  \"simulation_flags\": [\n    \"SKIP_VALIDATE\"\n  ]\n}\n\n      41: Transaction execution error: {\"transaction_index\":0,\"execution_error\":{\"contract_address\":\"0x34ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba\",\"class_hash\":\"0x5b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564\",\"selector\":\"0x15d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad\",\"error\":{\"contract_address\":\"0x34ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba\",\"class_hash\":\"0x5b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564\",\"selector\":\"0x15d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad\",\"error\":{\"contract_address\":\"0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd\",\"class_hash\":\"0x18b68b6b3dfeb7f836ce404f6dc7a4921808faffb9c81cac73672ec2f62dd3\",\"selector\":\"0x2526ed064b11cc6fba5c5fd905d60d0585fd570250ddd238765f5acc3f0b94e\",\"error\":\"Transaction execution has failed:\\n0: Error in the called contract (contract address: 0x034ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba, class hash: 0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564, selector: 0x015d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad):\\nExecution failed. Failure reason:\\nError in contract (contract address: 0x034ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba, class hash: 0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564, selector: 0x015d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad):\\nError in contract (contract address: 0x06d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd, class hash: 0x0018b68b6b3dfeb7f836ce404f6dc7a4921808faffb9c81cac73672ec2f62dd3, selector: 0x02526ed064b11cc6fba5c5fd905d60d0585fd570250ddd238765f5acc3f0b94e):\\n0x4e4f545f41444a5544494341544f52 ('NOT_ADJUDICATOR').\\n [\\\"0x4e4f545f41444a5544494341544f52\\\"]\"}}}}",
+      "matchedExpectation": true,
+      "durationMs": 17
+    },
+    {
+      "id": "TX-03",
+      "title": "Settle privately — the same action, now authorised",
+      "expectRevert": null,
+      "txHash": "0x56852a654e0a6c558f7e0602ad828d4ac685b59493490721107e0288753d1da",
+      "blockNumber": 40,
+      "actualFee": "0x12fffa4893d6e0",
+      "events": [
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9",
+            "0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd",
+            "0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d"
+          ],
+          "data": [
+            "0xb1a2bc2ec50000",
+            "0x0"
+          ]
+        },
+        {
+          "from": "0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd",
+          "keys": [
+            "0x1f68a9f084e309a9cc80be2faba1367008a97c8c4ab86a63a818eb46fefd936",
+            "0x656cca156a9ffaf27e7a84e1fff209a6d859ccaaf3b7ca6920889efb819e036",
+            "0x33ea1c0803930a36d75f7bdffc62840a90521e6ffac5034bfa0bcaec0274669"
+          ],
+          "data": [
+            "0xb1a2bc2ec50000"
+          ]
+        },
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x134692b230b9e1ffa39098904722134159652b09c5bc41d88d6698779d228ff",
+            "0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d",
+            "0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e"
+          ],
+          "data": [
+            "0xb1a2bc2ec50000",
+            "0x0"
+          ]
+        },
+        {
+          "from": "0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d",
+          "keys": [
+            "0x36d6eb68ace2acc34b9ed00546588ecbcf58d4ce37d25309e07d2b2470b4ae5",
+            "0x3",
+            "0x656cca156a9ffaf27e7a84e1fff209a6d859ccaaf3b7ca6920889efb819e036"
+          ],
+          "data": [
+            "0xb1a2bc2ec50000"
+          ]
+        },
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x134692b230b9e1ffa39098904722134159652b09c5bc41d88d6698779d228ff",
+            "0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d",
+            "0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e"
+          ],
+          "data": [
+            "0x0",
+            "0x0"
+          ]
+        },
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9",
+            "0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d",
+            "0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e"
+          ],
+          "data": [
+            "0xb1a2bc2ec50000",
+            "0x0"
+          ]
+        },
+        {
+          "from": "0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e",
+          "keys": [
+            "0x2878849b43b8abcfb9b7f8f2df6fc8d3be5f3c30c87972dce2fe5c90984f3f4",
+            "0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77",
+            "0x4e4f544531"
+          ],
+          "data": [
+            "0xb1a2bc2ec50000",
+            "0x77e772392b60000"
+          ]
+        },
+        {
+          "from": "0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+          "keys": [
+            "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9",
+            "0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77",
+            "0x1000"
+          ],
+          "data": [
+            "0x12fffa4893d6e0",
+            "0x0"
+          ]
+        }
+      ],
+      "status": "succeeded",
+      "durationMs": 10036
+    },
+    {
+      "id": "NEG-06",
+      "title": "Settle the same claim a second time",
+      "expectRevert": "CLAIMED",
+      "status": "rejected",
+      "revertReason": "RPC: starknet_estimateFee with params {\n  \"request\": [\n    {\n      \"type\": \"INVOKE\",\n      \"sender_address\": \"0x025a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77\",\n      \"calldata\": [\n        \"0x1\",\n        \"0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e\",\n        \"0x3ed4f93062c06adeeeda8872b25d001ffa93a3ef70fe795ef9ddf03c9a1c8ee\",\n        \"0x7\",\n        \"0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d\",\n        \"0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd\",\n        \"0x33ea1c0803930a36d75f7bdffc62840a90521e6ffac5034bfa0bcaec0274669\",\n        \"0x656cca156a9ffaf27e7a84e1fff209a6d859ccaaf3b7ca6920889efb819e036\",\n        \"0x2effe78bf46926df83427f8b69af9a684393f390d77f2f46621836d03e02ade\",\n        \"0x2e5d94ec790e81ad214959fd67d421412575fb868fb8bfa1c97aaf536c9eabb\",\n        \"0x4e4f544532\"\n      ],\n      \"signature\": [],\n      \"nonce\": \"0xc\",\n      \"resource_bounds\": {\n        \"l2_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        },\n        \"l1_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        },\n        \"l1_data_gas\": {\n          \"max_amount\": \"0x0\",\n          \"max_price_per_unit\": \"0x0\"\n        }\n      },\n      \"tip\": \"0x1\",\n      \"paymaster_data\": [],\n      \"nonce_data_availability_mode\": \"L1\",\n      \"fee_data_availability_mode\": \"L1\",\n      \"account_deployment_data\": [],\n      \"version\": \"0x100000000000000000000000000000003\"\n    }\n  ],\n  \"block_id\": \"latest\",\n  \"simulation_flags\": [\n    \"SKIP_VALIDATE\"\n  ]\n}\n\n      41: Transaction execution error: {\"transaction_index\":0,\"execution_error\":{\"contract_address\":\"0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77\",\"class_hash\":\"0x5b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564\",\"selector\":\"0x15d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad\",\"error\":{\"contract_address\":\"0x25a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77\",\"class_hash\":\"0x5b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564\",\"selector\":\"0x15d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad\",\"error\":{\"contract_address\":\"0x3aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e\",\"class_hash\":\"0x3fccb8158570e99c2bb2a2069576d3d23702a3e0be16f5514f164876f676dee\",\"selector\":\"0x3ed4f93062c06adeeeda8872b25d001ffa93a3ef70fe795ef9ddf03c9a1c8ee\",\"error\":{\"contract_address\":\"0x446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d\",\"class_hash\":\"0x7fc2600c5d4763acdb7711454c633e7ae97e730d9908b86b13442c0ca6fb5e8\",\"selector\":\"0x402925cce9218828b3ac9a72ac249103f8448a1e1d73c3efaf5da992625043\",\"error\":{\"contract_address\":\"0x6d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd\",\"class_hash\":\"0x18b68b6b3dfeb7f836ce404f6dc7a4921808faffb9c81cac73672ec2f62dd3\",\"selector\":\"0x29e42fe1c00b3f3fd148964a5a490d8054f9b9984f7f564e609bac90495f8cd\",\"error\":\"Transaction execution has failed:\\n0: Error in the called contract (contract address: 0x025a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77, class hash: 0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564, selector: 0x015d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad):\\nExecution failed. Failure reason:\\nError in contract (contract address: 0x025a6c9f0c15ef30c139065096b4b8e563e6b86191fd600a4f0616df8f22fb77, class hash: 0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564, selector: 0x015d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad):\\nError in contract (contract address: 0x03aec328f9c4daad013e6481c181d4a6bfd2fad63d737de4edc543989edb334e, class hash: 0x03fccb8158570e99c2bb2a2069576d3d23702a3e0be16f5514f164876f676dee, selector: 0x03ed4f93062c06adeeeda8872b25d001ffa93a3ef70fe795ef9ddf03c9a1c8ee):\\nError in contract (contract address: 0x0446d8ff9f642f178f622bbdf5be2e9770cc410a9bf4a57626a67df2afd1191d, class hash: 0x07fc2600c5d4763acdb7711454c633e7ae97e730d9908b86b13442c0ca6fb5e8, selector: 0x00402925cce9218828b3ac9a72ac249103f8448a1e1d73c3efaf5da992625043):\\nError in contract (contract address: 0x06d1dc0b12b2c3f86ea97ab47b405dc05b135a5d9e7f52cdea1b8dbf2e567cfd, class hash: 0x0018b68b6b3dfeb7f836ce404f6dc7a4921808faffb9c81cac73672ec2f62dd3, selector: 0x029e42fe1c00b3f3fd148964a5a490d8054f9b9984f7f564e609bac90495f8cd):\\n0x434c41494d4544 ('CLAIMED').\\n [\\\"0x434c41494d4544\\\"]\"}}}}}}",
+      "matchedExpectation": true,
+      "durationMs": 5
+    }
+  ],
+  "checks": [
+    {
+      "label": "premature settlement reverted with NOT_APPROVED",
+      "ok": true
+    },
+    {
+      "label": "identical settlement succeeded after approval",
+      "ok": true
+    },
+    {
+      "label": "private balance increased by exactly the fixed payout",
+      "ok": true
+    },
+    {
+      "label": "public wallet received zero payout (delta is fee only)",
+      "ok": true
+    },
+    {
+      "label": "no STRK transfer to the public wallet in the settlement tx",
+      "ok": true
+    },
+    {
+      "label": "the only STRK the public wallet moves is the gas it pays",
+      "ok": true
+    },
+    {
+      "label": "payout left the policy for the anonymizer, not a wallet",
+      "ok": true
+    },
+    {
+      "label": "anonymizer returned the payout to the pool",
+      "ok": true
+    },
+    {
+      "label": "reserve decreased by exactly the payout",
+      "ok": true
+    },
+    {
+      "label": "exposure released to zero",
+      "ok": true
+    },
+    {
+      "label": "policy marked settled onchain",
+      "ok": true
+    },
+    {
+      "label": "claim marked redeemed onchain",
+      "ok": true
+    }
+  ],
+  "verdict": "PASS"
+}

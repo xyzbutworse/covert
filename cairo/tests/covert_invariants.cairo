@@ -3,8 +3,8 @@ mod audits {
     use core::poseidon::poseidon_hash_span;
     use snforge_std::{
         ContractClassTrait, DeclareResultTrait, declare,
-        start_cheat_block_timestamp, start_cheat_caller_address,
-        stop_cheat_block_timestamp, stop_cheat_caller_address,
+        start_cheat_block_timestamp, start_cheat_block_timestamp_global, start_cheat_caller_address,
+        stop_cheat_block_timestamp, stop_cheat_block_timestamp_global, stop_cheat_caller_address,
     };
     use starknet::ContractAddress;
 use covert::covert_policy::{
@@ -17,6 +17,10 @@ use covert::covert_anonymizer::{
     OpenNoteDeposit,
 };
 use covert::mock_token::{IMockTokenDispatcher, IMockTokenDispatcherTrait};
+use covert::mock_strk20_pool::{
+    IMockStrk20PoolDispatcher, IMockStrk20PoolDispatcherTrait,
+    IMockStrk20PoolSafeDispatcher, IMockStrk20PoolSafeDispatcherTrait,
+};
 
 const PREMIUM_1: u128 = 10000000000000000;
 const PAYOUT_1: u128 = 50000000000000000;
@@ -49,6 +53,8 @@ const SIG_CLAIM_B_R: felt252 = 0x3b323c6041a200232355de913e499978b3e85b469f95933
 const SIG_CLAIM_B_S: felt252 = 0x1cc4bd9032a62bc926c103645c78c4548038b66a025455a2f1bfa8b3d55c770;
 const SIG_REDEEM_B_R: felt252 = 0x59f8a51771eb3b82819468dec6bb074859b37ca0c3faf1d6c28928d4e5389cd;
 const SIG_REDEEM_B_S: felt252 = 0x2ebbd9a3e0fb8b3299efc15286cbc874364f9dfef45ccf00477924e9c8ac836;
+
+const ADJUDICATION_WINDOW: u64 = 259200;
 
 const OP_BUY: felt252 = 1;
 const OP_CLAIM: felt252 = 2;
@@ -1157,5 +1163,330 @@ fn only_adjudicator_can_decide_claims_even_before_claim_lookup() {
         Result::Err(_) => {},
     };
     stop_cheat_caller_address(policy_address);
+}
+
+
+// =====================================================================
+// Adjudication liveness: an abandoned claim must not lock reserve capital
+// forever, but must not be closable before its deadline either.
+// =====================================================================
+
+fn claimed_policy_at(
+    timestamp: u64,
+) -> (IMockTokenDispatcher, ICovertPolicyDispatcher, ContractAddress, ContractAddress) {
+    let (token, token_address) = deploy_token();
+    let (policy, policy_address) = deploy_policy(token_address);
+    let anon = anonymizer_actor();
+    configure_and_fund(token, policy, policy_address, anon);
+    purchase_direct(token, policy, policy_address, anon, POLICY_A, BOB_PUB, 1, PREMIUM_1, timestamp);
+
+    start_cheat_caller_address(policy_address, anon);
+    start_cheat_block_timestamp(policy_address, timestamp);
+    policy.submit_claim(POLICY_A, CLAIM_A, INCIDENT_A, SIG_CLAIM_A_R, SIG_CLAIM_A_S);
+    stop_cheat_block_timestamp(policy_address);
+    stop_cheat_caller_address(policy_address);
+    (token, policy, policy_address, anon)
+}
+
+#[test]
+fn claim_deadline_is_submission_time_plus_window() {
+    let submitted_at = 1_000_000_u64;
+    let (_token, policy, _policy_address, _anon) = claimed_policy_at(submitted_at);
+    assert(policy.adjudication_window() == ADJUDICATION_WINDOW, 'window changed');
+    assert(policy.claim_deadline(CLAIM_A) == submitted_at + ADJUDICATION_WINDOW, 'bad deadline');
+    // A claim that does not exist reports no deadline rather than a bare window.
+    assert(policy.claim_deadline(0xdead) == 0, 'phantom deadline');
+}
+
+#[test]
+fn stale_claim_cannot_be_closed_before_its_deadline() {
+    let submitted_at = 1_000_000_u64;
+    let (_token, policy, policy_address, _anon) = claimed_policy_at(submitted_at);
+    let safe = ICovertPolicySafeDispatcher { contract_address: policy_address };
+
+    // One second before the deadline the adjudicator still owns the decision.
+    start_cheat_block_timestamp(policy_address, submitted_at + ADJUDICATION_WINDOW);
+    let reason = revert_felt(safe.expire_stale_claim(CLAIM_A));
+    stop_cheat_block_timestamp(policy_address);
+    assert(reason == 'NOT_STALE', 'wrong reason before deadline');
+    assert(policy.exposure() == PAYOUT_1, 'exposure released early');
+}
+
+#[test]
+fn stale_claim_closes_after_deadline_and_releases_exposure() {
+    let submitted_at = 1_000_000_u64;
+    let (_token, policy, policy_address, _anon) = claimed_policy_at(submitted_at);
+    assert(policy.exposure() == PAYOUT_1, 'exposure not reserved');
+    let reserve_before = policy.reserve();
+
+    // Anyone may close it once the window has elapsed: this is a liveness escape,
+    // not a privileged action.
+    start_cheat_caller_address(policy_address, attacker());
+    start_cheat_block_timestamp(policy_address, submitted_at + ADJUDICATION_WINDOW + 1);
+    policy.expire_stale_claim(CLAIM_A);
+    stop_cheat_block_timestamp(policy_address);
+    stop_cheat_caller_address(policy_address);
+
+    assert(policy.exposure() == 0, 'exposure not released');
+    assert(policy.reserve() == reserve_before, 'reserve moved on timeout');
+    let (_, _, _, decision, redeemed) = policy.claim_state(CLAIM_A);
+    assert(decision == 2, 'claim not closed');
+    assert(!redeemed, 'timeout paid out');
+    let (_, _, _, _, active, claimed, _) = policy.policy_state(POLICY_A);
+    assert(!active, 'policy still active');
+    assert(!claimed, 'timeout marked as paid');
+}
+
+#[test]
+fn timed_out_claim_cannot_then_be_settled() {
+    let submitted_at = 1_000_000_u64;
+    let (_token, policy, policy_address, anon) = claimed_policy_at(submitted_at);
+    start_cheat_block_timestamp(policy_address, submitted_at + ADJUDICATION_WINDOW + 1);
+    policy.expire_stale_claim(CLAIM_A);
+    stop_cheat_block_timestamp(policy_address);
+
+    let safe = ICovertPolicySafeDispatcher { contract_address: policy_address };
+    start_cheat_caller_address(policy_address, anon);
+    let reason = revert_felt(safe.redeem_claim(POLICY_A, CLAIM_A, SIG_REDEEM_A_R, SIG_REDEEM_A_S));
+    stop_cheat_caller_address(policy_address);
+    assert(reason == 'NOT_APPROVED', 'timed-out claim settled');
+}
+
+#[test]
+fn timed_out_claim_cannot_be_closed_twice() {
+    let submitted_at = 1_000_000_u64;
+    let (_token, policy, policy_address, _anon) = claimed_policy_at(submitted_at);
+    start_cheat_block_timestamp(policy_address, submitted_at + ADJUDICATION_WINDOW + 1);
+    policy.expire_stale_claim(CLAIM_A);
+    let safe = ICovertPolicySafeDispatcher { contract_address: policy_address };
+    let reason = revert_felt(safe.expire_stale_claim(CLAIM_A));
+    stop_cheat_block_timestamp(policy_address);
+    assert(reason == 'DECIDED', 'double timeout allowed');
+}
+
+#[test]
+fn decided_claim_cannot_be_timed_out() {
+    let submitted_at = 1_000_000_u64;
+    let (_token, policy, policy_address, _anon) = claimed_policy_at(submitted_at);
+    start_cheat_caller_address(policy_address, adjudicator());
+    policy.approve_claim(CLAIM_A);
+    stop_cheat_caller_address(policy_address);
+
+    let safe = ICovertPolicySafeDispatcher { contract_address: policy_address };
+    start_cheat_block_timestamp(policy_address, submitted_at + ADJUDICATION_WINDOW + 5);
+    let reason = revert_felt(safe.expire_stale_claim(CLAIM_A));
+    stop_cheat_block_timestamp(policy_address);
+    assert(reason == 'DECIDED', 'approved claim timed out');
+}
+
+#[test]
+fn timing_out_a_claim_that_does_not_exist_is_rejected() {
+    let (token, token_address) = deploy_token();
+    let (_policy, policy_address) = deploy_policy(token_address);
+    let _ = token;
+    let safe = ICovertPolicySafeDispatcher { contract_address: policy_address };
+    let reason = revert_felt(safe.expire_stale_claim(0xabc));
+    assert(reason == 'CLAIM_MISSING', 'phantom claim timed out');
+}
+
+// =====================================================================
+// Reserve surplus: capital that backs nothing must be recoverable, and
+// capital that backs an outstanding policy must not be.
+// =====================================================================
+
+#[test]
+fn free_reserve_tracks_exposure_and_saturates_at_zero() {
+    let (token, token_address) = deploy_token();
+    let (policy, policy_address) = deploy_policy(token_address);
+    let anon = anonymizer_actor();
+    configure_and_fund(token, policy, policy_address, anon);
+    assert(policy.free_reserve() == RESERVE, 'free reserve wrong');
+
+    purchase_direct(token, policy, policy_address, anon, POLICY_A, BOB_PUB, 1, PREMIUM_1, 1_000_000);
+    // Premium joins the reserve, payout becomes exposure.
+    assert(policy.reserve() == RESERVE + PREMIUM_1, 'reserve missing premium');
+    assert(policy.exposure() == PAYOUT_1, 'exposure wrong');
+    assert(policy.free_reserve() == RESERVE + PREMIUM_1 - PAYOUT_1, 'free reserve wrong');
+}
+
+#[test]
+fn owner_can_withdraw_only_unbacked_reserve() {
+    let (token, token_address) = deploy_token();
+    let (policy, policy_address) = deploy_policy(token_address);
+    let anon = anonymizer_actor();
+    configure_and_fund(token, policy, policy_address, anon);
+    purchase_direct(token, policy, policy_address, anon, POLICY_A, BOB_PUB, 1, PREMIUM_1, 1_000_000);
+
+    let surplus = policy.free_reserve();
+    let safe = ICovertPolicySafeDispatcher { contract_address: policy_address };
+
+    // One wei beyond the surplus would start eating the outstanding policy's backing.
+    start_cheat_caller_address(policy_address, owner());
+    let reason = revert_felt(safe.withdraw_surplus(surplus + 1, owner()));
+    assert(reason == 'NO_SURPLUS', 'over-withdraw allowed');
+
+    policy.withdraw_surplus(surplus, owner());
+    stop_cheat_caller_address(policy_address);
+
+    assert(policy.free_reserve() == 0, 'surplus not drained');
+    assert(policy.reserve() == PAYOUT_1, 'backing removed');
+    assert(policy.exposure() == PAYOUT_1, 'exposure changed');
+    assert(token.balance_of(owner()) == surplus.into(), 'owner not paid surplus');
+}
+
+#[test]
+fn surplus_withdrawal_is_owner_only_and_rejects_zero() {
+    let (token, token_address) = deploy_token();
+    let (policy, policy_address) = deploy_policy(token_address);
+    let anon = anonymizer_actor();
+    configure_and_fund(token, policy, policy_address, anon);
+    let safe = ICovertPolicySafeDispatcher { contract_address: policy_address };
+
+    start_cheat_caller_address(policy_address, attacker());
+    let reason = revert_felt(safe.withdraw_surplus(1, attacker()));
+    stop_cheat_caller_address(policy_address);
+    assert(reason == 'NOT_OWNER', 'attacker drained reserve');
+
+    start_cheat_caller_address(policy_address, adjudicator());
+    let reason_adj = revert_felt(safe.withdraw_surplus(1, adjudicator()));
+    stop_cheat_caller_address(policy_address);
+    assert(reason_adj == 'NOT_OWNER', 'adjudicator drained reserve');
+
+    start_cheat_caller_address(policy_address, owner());
+    let reason_zero = revert_felt(safe.withdraw_surplus(0, owner()));
+    let zero_addr: ContractAddress = 0.try_into().unwrap();
+    let reason_addr = revert_felt(safe.withdraw_surplus(1, zero_addr));
+    stop_cheat_caller_address(policy_address);
+    assert(reason_zero == 'BAD_AMOUNT', 'zero withdraw allowed');
+    assert(reason_addr == 'BAD_ADDRESS', 'burn address allowed');
+    assert(policy.reserve() == RESERVE, 'reserve moved');
+}
+
+#[test]
+fn settled_payout_leaves_reserve_withdrawable_but_not_the_paid_amount() {
+    let (token, token_address) = deploy_token();
+    let (policy, policy_address) = deploy_policy(token_address);
+    let anon = anonymizer_actor();
+    configure_and_fund(token, policy, policy_address, anon);
+    purchase_direct(token, policy, policy_address, anon, POLICY_A, BOB_PUB, 1, PREMIUM_1, 1_000_000);
+    submit_claim_direct(
+        policy, policy_address, anon, POLICY_A, CLAIM_A, INCIDENT_A, SIG_CLAIM_A_R, SIG_CLAIM_A_S,
+    );
+    start_cheat_caller_address(policy_address, adjudicator());
+    policy.approve_claim(CLAIM_A);
+    stop_cheat_caller_address(policy_address);
+    redeem_direct(policy, policy_address, anon, POLICY_A, CLAIM_A, SIG_REDEEM_A_R, SIG_REDEEM_A_S);
+
+    // After settlement nothing is outstanding, so the whole remaining reserve is free.
+    assert(policy.exposure() == 0, 'exposure not released');
+    assert(policy.free_reserve() == RESERVE + PREMIUM_1 - PAYOUT_1, 'free reserve wrong');
+}
+
+#[test]
+fn policy_claim_reverse_index_is_populated_on_submission() {
+    let (token, token_address) = deploy_token();
+    let (policy, policy_address) = deploy_policy(token_address);
+    let anon = anonymizer_actor();
+    configure_and_fund(token, policy, policy_address, anon);
+    purchase_direct(token, policy, policy_address, anon, POLICY_A, BOB_PUB, 1, PREMIUM_1, 1_000_000);
+    assert(policy.policy_claim(POLICY_A) == 0, 'claim before submission');
+    submit_claim_direct(
+        policy, policy_address, anon, POLICY_A, CLAIM_A, INCIDENT_A, SIG_CLAIM_A_R, SIG_CLAIM_A_S,
+    );
+    assert(policy.policy_claim(POLICY_A) == CLAIM_A, 'reverse index missing');
+}
+
+// =====================================================================
+// End-to-end through a pool contract that actually calls the anonymizer.
+// No caller cheats: the pool is genuinely the caller the anonymizer pins.
+// =====================================================================
+
+fn deploy_pool(token_address: ContractAddress) -> (IMockStrk20PoolDispatcher, ContractAddress) {
+    let class = declare("MockStrk20Pool").unwrap().contract_class();
+    let (address, _) = class.deploy(@array![token_address.into()]).unwrap();
+    (IMockStrk20PoolDispatcher { contract_address: address }, address)
+}
+
+fn holder() -> ContractAddress { 'holder'.try_into().unwrap() }
+
+#[test]
+fn pool_routed_lifecycle_fails_before_approval_and_succeeds_after() {
+    let (token, token_address) = deploy_token();
+    let (policy, policy_address) = deploy_policy(token_address);
+    let (pool, pool_address) = deploy_pool(token_address);
+    let (_anon, anon_address) = deploy_anonymizer(policy_address, pool_address, token_address);
+    configure_and_fund(token, policy, policy_address, anon_address);
+
+    let now = 1_700_000_000_u64;
+    start_cheat_block_timestamp_global(now);
+
+    // --- shield: public deposit into the pool -----------------------------
+    let shield: u128 = 500000000000000000; // 0.5 STRK
+    token.mint(holder(), shield.into());
+    start_cheat_caller_address(pool_address, holder());
+    pool.deposit(shield);
+    assert(pool.private_balance(holder()) == shield, 'shield not credited');
+    let public_after_shield = token.balance_of(holder());
+
+    // --- activate cover privately ----------------------------------------
+    pool.route_buy(anon_address, policy_address, POLICY_A, BOB_PUB, 1, PREMIUM_1);
+    let (exists, tier, _, expiry, active, _, _) = policy.policy_state(POLICY_A);
+    assert(exists && active, 'policy not active');
+    assert(tier == 1, 'wrong tier');
+    assert(expiry == now + TERM_1, 'expiry not contract derived');
+    assert(pool.private_balance(holder()) == shield - PREMIUM_1, 'premium not debited');
+
+    // --- file the authenticated claim ------------------------------------
+    pool.route_claim(
+        anon_address, policy_address, POLICY_A, CLAIM_A, INCIDENT_A, SIG_CLAIM_A_R, SIG_CLAIM_A_S,
+    );
+    let (claim_exists, claim_policy, _, decision, _) = policy.claim_state(CLAIM_A);
+    assert(claim_exists, 'claim not filed');
+    assert(claim_policy == POLICY_A, 'claim not bound to policy');
+    assert(decision == 0, 'claim pre-decided');
+
+    // --- SETTLEMENT BEFORE APPROVAL MUST FAIL, FOR THIS EXACT REASON ------
+    let pool_safe = IMockStrk20PoolSafeDispatcher { contract_address: pool_address };
+    let premature = revert_felt(
+        pool_safe.route_redeem(
+            anon_address, policy_address, POLICY_A, CLAIM_A, SIG_REDEEM_A_R, SIG_REDEEM_A_S, 0x4e4f5445315f,
+        ),
+    );
+    assert(premature == 'NOT_APPROVED', 'premature settlement reason');
+    assert(pool.private_balance(holder()) == shield - PREMIUM_1, 'premature settlement paid');
+    assert(policy.exposure() == PAYOUT_1, 'exposure changed on reject');
+    stop_cheat_caller_address(pool_address);
+
+    // --- adjudicator approves --------------------------------------------
+    start_cheat_caller_address(policy_address, adjudicator());
+    policy.approve_claim(CLAIM_A);
+    stop_cheat_caller_address(policy_address);
+
+    // --- the identical settlement now succeeds ----------------------------
+    let reserve_before = policy.reserve();
+    start_cheat_caller_address(pool_address, holder());
+    let credited = pool.route_redeem(
+        anon_address, policy_address, POLICY_A, CLAIM_A, SIG_REDEEM_A_R, SIG_REDEEM_A_S, 0x4e4f5445315f,
+    );
+    stop_cheat_caller_address(pool_address);
+
+    assert(credited == PAYOUT_1, 'payout not fixed by tier');
+    assert(pool.private_balance(holder()) == shield - PREMIUM_1 + PAYOUT_1, 'private delta wrong');
+    // The observable consequence: the public wallet balance never moved.
+    assert(token.balance_of(holder()) == public_after_shield, 'public wallet was paid');
+    assert(policy.reserve() == reserve_before - PAYOUT_1, 'reserve not reconciled');
+    assert(policy.exposure() == 0, 'exposure not released');
+
+    // --- and it cannot be drawn twice -------------------------------------
+    start_cheat_caller_address(pool_address, holder());
+    let replay = revert_felt(
+        pool_safe.route_redeem(
+            anon_address, policy_address, POLICY_A, CLAIM_A, SIG_REDEEM_A_R, SIG_REDEEM_A_S, 0x4e4f5445325f,
+        ),
+    );
+    stop_cheat_caller_address(pool_address);
+    assert(replay == 'CLAIMED', 'double settlement reason');
+
+    stop_cheat_block_timestamp_global();
 }
 }

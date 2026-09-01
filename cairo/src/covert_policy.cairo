@@ -29,6 +29,8 @@ pub trait ICovertPolicy<TState> {
         sig_s: felt252,
     ) -> u128;
     fn expire_policy(ref self: TState, policy_commitment: felt252);
+    fn expire_stale_claim(ref self: TState, claim_commitment: felt252);
+    fn withdraw_surplus(ref self: TState, amount: u128, recipient: ContractAddress);
     fn quote_tier(self: @TState, tier: u8) -> (u128, u128, u64);
     fn owner(self: @TState) -> ContractAddress;
     fn adjudicator(self: @TState) -> ContractAddress;
@@ -36,8 +38,12 @@ pub trait ICovertPolicy<TState> {
     fn token(self: @TState) -> ContractAddress;
     fn reserve(self: @TState) -> u128;
     fn exposure(self: @TState) -> u128;
+    fn free_reserve(self: @TState) -> u128;
+    fn adjudication_window(self: @TState) -> u64;
     fn policy_state(self: @TState, commitment: felt252) -> (bool, u8, felt252, u64, bool, bool, bool);
+    fn policy_claim(self: @TState, commitment: felt252) -> felt252;
     fn claim_state(self: @TState, claim_commitment: felt252) -> (bool, felt252, felt252, u8, bool);
+    fn claim_deadline(self: @TState, claim_commitment: felt252) -> u64;
 }
 
 #[starknet::contract]
@@ -62,6 +68,12 @@ pub mod CovertPolicy {
     const PREMIUM_3: u128 = 40000000000000000;   // 0.04 STRK
     const PAYOUT_3: u128 = 200000000000000000;   // 0.20 STRK
     const TERM_3: u64 = 2592000;                  // 30 days
+
+    // Adjudication liveness bound. A claim left undecided past this window can be
+    // timed out by anyone, which stops an absent adjudicator from locking reserve
+    // capital behind an open claim forever. It cannot be used to deny a claim early:
+    // the deadline is enforced against block time, not against a caller's authority.
+    const ADJUDICATION_WINDOW_SECONDS: u64 = 259200; // 72 hours
 
     // Domain separation prevents a signature produced for one action from being replayed as another.
     const CLAIM_DOMAIN: felt252 = 'COVERT_CLAIM_V1';
@@ -95,6 +107,9 @@ pub mod CovertPolicy {
         pub const INSOLVENT: felt252 = 'INSOLVENT';
         pub const TRANSFER_FAILED: felt252 = 'TRANSFER_FAILED';
         pub const BAD_ADDRESS: felt252 = 'BAD_ADDRESS';
+        pub const NOT_STALE: felt252 = 'NOT_STALE';
+        pub const NO_SURPLUS: felt252 = 'NO_SURPLUS';
+        pub const BAD_AMOUNT: felt252 = 'BAD_AMOUNT';
     }
 
     #[storage]
@@ -120,6 +135,8 @@ pub mod CovertPolicy {
         claim_incident: Map<felt252, felt252>,
         claim_decision: Map<felt252, u8>,
         claim_redeemed: Map<felt252, bool>,
+        claim_submitted_at: Map<felt252, u64>,
+        policy_claim_of: Map<felt252, felt252>,
     }
 
     #[event]
@@ -132,7 +149,9 @@ pub mod CovertPolicy {
         ClaimSubmitted: ClaimSubmitted,
         ClaimApproved: ClaimApproved,
         ClaimDenied: ClaimDenied,
+        ClaimTimedOut: ClaimTimedOut,
         ClaimSettled: ClaimSettled,
+        ReserveWithdrawn: ReserveWithdrawn,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -150,13 +169,25 @@ pub mod CovertPolicy {
         incident_hash: felt252,
     }
     #[derive(Drop, starknet::Event)]
-    struct ClaimApproved { #[key] claim_commitment: felt252 }
+    struct ClaimApproved {
+        #[key] claim_commitment: felt252,
+        #[key] policy_commitment: felt252,
+    }
     #[derive(Drop, starknet::Event)]
     struct ClaimDenied {
         #[key] claim_commitment: felt252,
         #[key] policy_commitment: felt252,
         released_exposure: u128,
     }
+    #[derive(Drop, starknet::Event)]
+    struct ClaimTimedOut {
+        #[key] claim_commitment: felt252,
+        #[key] policy_commitment: felt252,
+        released_exposure: u128,
+        deadline: u64,
+    }
+    #[derive(Drop, starknet::Event)]
+    struct ReserveWithdrawn { amount: u128, reserve: u128, recipient: ContractAddress }
     #[derive(Drop, starknet::Event)]
     struct ClaimSettled {
         #[key] claim_commitment: felt252,
@@ -315,10 +346,13 @@ pub mod CovertPolicy {
             self.assert_bearer_signature(msg_hash, owner_key, sig_r, sig_s);
 
             self.policy_has_claim.write(policy_commitment, true);
+            self.policy_claim_of.write(policy_commitment, claim_commitment);
             self.claim_exists.write(claim_commitment, true);
             self.claim_policy.write(claim_commitment, policy_commitment);
             self.claim_incident.write(claim_commitment, incident_hash);
             self.claim_decision.write(claim_commitment, DECISION_PENDING);
+            // Starts the adjudication clock used by expire_stale_claim.
+            self.claim_submitted_at.write(claim_commitment, get_block_timestamp());
             self.emit(ClaimSubmitted { claim_commitment, policy_commitment, incident_hash });
         }
 
@@ -326,8 +360,12 @@ pub mod CovertPolicy {
             self.only_adjudicator();
             assert(self.claim_exists.read(claim_commitment), errors::CLAIM_MISSING);
             assert(self.claim_decision.read(claim_commitment) == DECISION_PENDING, errors::DECIDED);
+            // An approval on a policy that is no longer active would authorise a
+            // settlement the policy can never honour. Refuse it at decision time.
+            let policy_commitment = self.claim_policy.read(claim_commitment);
+            assert(self.policy_active.read(policy_commitment), errors::POLICY_MISSING);
             self.claim_decision.write(claim_commitment, DECISION_APPROVED);
-            self.emit(ClaimApproved { claim_commitment });
+            self.emit(ClaimApproved { claim_commitment, policy_commitment });
         }
 
         fn deny_claim(ref self: ContractState, claim_commitment: felt252) {
@@ -390,6 +428,56 @@ pub mod CovertPolicy {
             self.emit(PolicyExpired { commitment: policy_commitment, released_exposure: released });
         }
 
+        /// Permissionless liveness escape for an abandoned claim.
+        ///
+        /// If the adjudicator never decides, the policy's fixed payout would stay
+        /// reserved forever and the reserve could never back new cover. After the
+        /// adjudication window elapses anyone may close the claim, which releases
+        /// the exposure. The window is checked against block time, so this cannot
+        /// be used to deny a claim the adjudicator still has time to decide.
+        fn expire_stale_claim(ref self: ContractState, claim_commitment: felt252) {
+            assert(self.claim_exists.read(claim_commitment), errors::CLAIM_MISSING);
+            assert(self.claim_decision.read(claim_commitment) == DECISION_PENDING, errors::DECIDED);
+
+            let deadline = self.claim_submitted_at.read(claim_commitment) + ADJUDICATION_WINDOW_SECONDS;
+            assert(get_block_timestamp() > deadline, errors::NOT_STALE);
+
+            let policy_commitment = self.claim_policy.read(claim_commitment);
+            assert(self.policy_active.read(policy_commitment), errors::POLICY_MISSING);
+
+            let released = self.release_exposure(policy_commitment);
+            self.claim_decision.write(claim_commitment, DECISION_DENIED);
+            self.policy_active.write(policy_commitment, false);
+            self.emit(ClaimTimedOut { claim_commitment, policy_commitment, released_exposure: released, deadline });
+        }
+
+        /// Withdraw only reserve that backs nothing.
+        ///
+        /// Without this, every STRK ever paid into the reserve is locked in the
+        /// contract forever. The bound is the invariant that matters: the owner can
+        /// never remove capital that is backing an outstanding policy, because the
+        /// withdrawable amount is reserve minus current exposure.
+        fn withdraw_surplus(ref self: ContractState, amount: u128, recipient: ContractAddress) {
+            self.only_owner();
+            let zero: ContractAddress = 0.try_into().unwrap();
+            assert(recipient != zero, errors::BAD_ADDRESS);
+            assert(amount > 0, errors::BAD_AMOUNT);
+
+            let reserve = self.reserve_amount.read();
+            let exposure = self.exposure_amount.read();
+            assert(reserve >= exposure, errors::INSOLVENT);
+            let surplus = reserve - exposure;
+            assert(amount <= surplus, errors::NO_SURPLUS);
+
+            let next = reserve - amount;
+            self.reserve_amount.write(next);
+
+            let erc20 = IERC20Dispatcher { contract_address: self.token.read() };
+            let ok = erc20.transfer(recipient, amount.into());
+            assert(ok, errors::TRANSFER_FAILED);
+            self.emit(ReserveWithdrawn { amount, reserve: next, recipient });
+        }
+
         fn quote_tier(self: @ContractState, tier: u8) -> (u128, u128, u64) {
             self.economics(tier)
         }
@@ -401,6 +489,16 @@ pub mod CovertPolicy {
 
         fn reserve(self: @ContractState) -> u128 { self.reserve_amount.read() }
         fn exposure(self: @ContractState) -> u128 { self.exposure_amount.read() }
+
+        /// Reserve that is not backing an outstanding policy. Saturates at zero so a
+        /// reader never sees an underflow panic instead of a solvency figure.
+        fn free_reserve(self: @ContractState) -> u128 {
+            let reserve = self.reserve_amount.read();
+            let exposure = self.exposure_amount.read();
+            if reserve > exposure { reserve - exposure } else { 0 }
+        }
+
+        fn adjudication_window(self: @ContractState) -> u64 { ADJUDICATION_WINDOW_SECONDS }
 
         fn policy_state(
             self: @ContractState,
@@ -415,6 +513,17 @@ pub mod CovertPolicy {
                 self.policy_claimed.read(commitment),
                 self.policy_has_claim.read(commitment),
             )
+        }
+
+        /// Reverse index: the claim filed against a policy, or 0.
+        fn policy_claim(self: @ContractState, commitment: felt252) -> felt252 {
+            self.policy_claim_of.read(commitment)
+        }
+
+        /// Timestamp after which expire_stale_claim becomes callable. 0 if no claim.
+        fn claim_deadline(self: @ContractState, claim_commitment: felt252) -> u64 {
+            if !self.claim_exists.read(claim_commitment) { return 0; }
+            self.claim_submitted_at.read(claim_commitment) + ADJUDICATION_WINDOW_SECONDS
         }
 
         fn claim_state(

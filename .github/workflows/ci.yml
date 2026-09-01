@@ -1,8 +1,23 @@
 name: CI
 
+# `push` is scoped to main so a pull request does not run every job twice: the
+# pull_request trigger already covers branch work.
 on:
   push:
+    branches: [main]
   pull_request:
+
+# A superseded run proves nothing. Cancel it rather than paying for the devnet
+# lifecycle job twice on the same branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DEVNET_VERSION: 0.9.2
 
 jobs:
   frontend:
@@ -12,6 +27,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run typecheck
       - name: Domain unit tests
@@ -48,7 +64,7 @@ jobs:
         run: snforge test
 
   # Re-executes the complete lifecycle as real transactions against a real
-  # Starknet node and re-verifies the captured artifact independently, so the
+  # Starknet node and re-verifies the result from chain events alone, so the
   # evidence in this repository cannot silently go stale.
   lifecycle:
     runs-on: ubuntu-latest
@@ -57,6 +73,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
       - uses: asdf-vm/actions/install@v4
         with:
           tool_versions: |
@@ -65,29 +82,73 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - working-directory: cairo
         run: scarb build
+
+      # Building starknet-devnet from source takes minutes. Cache the binary so
+      # only a version bump pays that cost.
+      - name: Cache starknet-devnet
+        id: devnet-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/starknet-devnet
+          key: starknet-devnet-${{ runner.os }}-${{ env.DEVNET_VERSION }}
       - name: Install starknet-devnet
-        run: cargo install starknet-devnet --locked --version 0.9.2
+        if: steps.devnet-cache.outputs.cache-hit != 'true'
+        run: cargo install starknet-devnet --locked --version ${{ env.DEVNET_VERSION }}
+
       - name: Start devnet
         run: |
-          starknet-devnet --seed 42 --accounts 5 --host 127.0.0.1 --port 5050 &
-          for i in $(seq 1 60); do
-            if curl -s -X POST http://127.0.0.1:5050 \
+          nohup starknet-devnet --seed 42 --accounts 5 \
+            --host 127.0.0.1 --port 5050 > devnet.log 2>&1 &
+          for _ in $(seq 1 60); do
+            if curl -sf -X POST http://127.0.0.1:5050 \
               -H 'content-type: application/json' \
               -d '{"jsonrpc":"2.0","method":"starknet_blockNumber","params":[],"id":1}' >/dev/null; then
-              echo "devnet up"; exit 0
+              echo "devnet up"
+              exit 0
             fi
             sleep 2
           done
-          echo "devnet did not start"; exit 1
+          echo "devnet did not start"
+          cat devnet.log
+          exit 1
+
       - name: Execute the full lifecycle
         run: npm run lifecycle
+
       - name: Verify it independently from chain events
         run: npm run verify -- --artifact evidence/devnet-lifecycle.json
-      - name: Fail if the committed artifact drifted
-        run: git diff --exit-code --stat evidence/devnet-lifecycle.json || echo "artifact changed (expected — hashes differ per run)"
+
+      # Transaction hashes differ every run, so diffing the artifact proves
+      # nothing. What must hold is that the run reached a PASS verdict with every
+      # assertion satisfied — including the adversarial steps that are only
+      # allowed to fail for their exact expected invariant.
+      - name: Assert the lifecycle verdict
+        run: |
+          node -e '
+            const a = require("./evidence/devnet-lifecycle.json");
+            const failed = a.checks.filter((c) => !c.ok);
+            const badNegatives = a.steps.filter(
+              (s) => s.expectRevert && s.matchedExpectation !== true
+            );
+            for (const c of failed) console.error("FAILED CHECK:", c.label);
+            for (const s of badNegatives)
+              console.error(
+                `NEGATIVE STEP ${s.id} did not fail with ${s.expectRevert}:`,
+                s.status,
+                s.revertReason ?? s.error ?? ""
+              );
+            if (a.verdict !== "PASS" || failed.length || badNegatives.length) {
+              console.error("verdict:", a.verdict);
+              process.exit(1);
+            }
+            console.log(`lifecycle PASS — ${a.checks.length} checks, ${a.steps.length} steps`);
+          '
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: lifecycle-artifact
-          path: evidence/devnet-lifecycle.json
+          path: |
+            evidence/devnet-lifecycle.json
+            devnet.log
           retention-days: 30

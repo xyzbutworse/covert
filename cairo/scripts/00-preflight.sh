@@ -32,7 +32,11 @@ if [[ "${MAINNET_RPC_URL}" == *"__FILL_IN__"* || "${MAINNET_RPC_URL}" == *"YOUR_
 fi
 
 # The two roles must differ, or the separation the contract enforces is pointless.
-if [[ "${OWNER_ADDRESS,,}" == "${ADJUDICATOR_ADDRESS,,}" ]]; then
+# Lowercase via tr, not ${VAR,,}: macOS ships bash 3.2, where that expansion is a
+# syntax error and the whole preflight would die before checking anything.
+owner_lc="$(printf '%s' "${OWNER_ADDRESS}" | tr '[:upper:]' '[:lower:]')"
+adj_lc="$(printf '%s' "${ADJUDICATOR_ADDRESS}" | tr '[:upper:]' '[:lower:]')"
+if [[ "${owner_lc}" == "${adj_lc}" ]]; then
   bad "role separation" "OWNER_ADDRESS and ADJUDICATOR_ADDRESS are the same account"
 else
   note "role separation" "owner != adjudicator"
@@ -42,14 +46,14 @@ echo
 
 # ------------------------------------------------------------------- chain --
 echo "Live chain checks:"
-chain_id="$("${SNC[@]}" call --contract-address "${STRK_TOKEN}" --function symbol 2>/dev/null || echo '')"
+chain_id="$(snc call --contract-address "${STRK_TOKEN}" --function symbol 2>/dev/null || echo '')"
 if [[ "${chain_id}" == *STRK* ]]; then
   note "STRK token symbol()" "STRK"
 else
   bad "STRK token symbol()" "did not report STRK at ${STRK_TOKEN}"
 fi
 
-pool_fee="$("${SNC[@]}" call --contract-address "${STRK20_POOL}" --function get_fee_amount 2>/dev/null || echo '')"
+pool_fee="$(snc call --contract-address "${STRK20_POOL}" --function get_fee_amount 2>/dev/null || echo '')"
 if [[ -n "${pool_fee}" ]]; then
   note "STRK20 pool get_fee_amount()" "${pool_fee}"
 else
@@ -58,7 +62,7 @@ else
   note "STRK20 pool get_fee_amount()" "unreadable (wallet will quote the fee)"
 fi
 
-owner_balance="$("${SNC[@]}" call --contract-address "${STRK_TOKEN}" --function balanceOf --arguments "${OWNER_ADDRESS}" 2>/dev/null || echo '')"
+owner_balance="$(snc call --contract-address "${STRK_TOKEN}" --function balanceOf --arguments "${OWNER_ADDRESS}" 2>/dev/null || echo '')"
 if [[ -n "${owner_balance}" ]]; then
   note "owner STRK balance" "${owner_balance}"
 else
@@ -92,7 +96,7 @@ echo "  Sequence: 2 declares, 2 deploys, 1 configure, 1 approve, 1 fund_reserve 
 echo "  Plus reserve capital: ${RESERVE_WEI} wei STRK locked into the policy contract."
 echo "  Run each script with --dry-run --detailed appended to the sncast command for exact fees."
 echo
-"${SNC[@]}" declare --contract-name CovertPolicy --dry-run --detailed 2>&1 | sed 's/^/  /' || \
+snc declare --contract-name CovertPolicy --dry-run --detailed 2>&1 | sed 's/^/  /' || \
   echo "  (dry-run estimate unavailable; fees will be shown at signing time)"
 
 echo

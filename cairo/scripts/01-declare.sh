@@ -12,7 +12,7 @@ echo
 echo "=== Declaring CovertPolicy ==="
 read -r -p "Confirm DECLARE CovertPolicy on Mainnet? [y/N] " yn
 if [[ "${yn}" != "y" && "${yn}" != "Y" ]]; then echo "Aborted."; exit 1; fi
-POLICY_DECLARE_OUT="$("${SNC[@]}" declare --contract-name CovertPolicy 2>&1 | tee /dev/stderr)"
+POLICY_DECLARE_OUT="$(snc declare --contract-name CovertPolicy 2>&1 | tee /dev/stderr)"
 POLICY_CLASS_HASH="$(printf '%s\n' "${POLICY_DECLARE_OUT}" | grep -iEo 'class hash: 0x[0-9a-fA-F]+' | head -1 | awk '{print $3}')"
 POLICY_DECLARE_TX="$(printf '%s\n' "${POLICY_DECLARE_OUT}" | grep -iEo 'transaction hash: 0x[0-9a-fA-F]+' | head -1 | awk '{print $3}')"
 log_tx "CovertPolicy declare" "${MAINNET_RPC_URL}" "${POLICY_DECLARE_TX:-?}"
@@ -21,7 +21,7 @@ echo
 echo "=== Declaring CovertAnonymizer ==="
 read -r -p "Confirm DECLARE CovertAnonymizer on Mainnet? [y/N] " yn
 if [[ "${yn}" != "y" && "${yn}" != "Y" ]]; then echo "Aborted."; exit 1; fi
-ANON_DECLARE_OUT="$("${SNC[@]}" declare --contract-name CovertAnonymizer 2>&1 | tee /dev/stderr)"
+ANON_DECLARE_OUT="$(snc declare --contract-name CovertAnonymizer 2>&1 | tee /dev/stderr)"
 ANON_CLASS_HASH="$(printf '%s\n' "${ANON_DECLARE_OUT}" | grep -iEo 'class hash: 0x[0-9a-fA-F]+' | head -1 | awk '{print $3}')"
 ANON_DECLARE_TX="$(printf '%s\n' "${ANON_DECLARE_OUT}" | grep -iEo 'transaction hash: 0x[0-9a-fA-F]+' | head -1 | awk '{print $3}')"
 log_tx "CovertAnonymizer declare" "${MAINNET_RPC_URL}" "${ANON_DECLARE_TX:-?}"

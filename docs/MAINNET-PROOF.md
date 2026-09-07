@@ -27,6 +27,12 @@ stand-in.
 Run `cairo/scripts/00-preflight.sh` to check all of these against the live chain
 and estimate the cost. It sends no transactions.
 
+On September 5, 2026, the live pool returned `6000000000000000000` wei from
+`get_fee_amount()`, equal to 6 STRK per private operation. TX-01 through TX-03
+therefore require 18 STRK in pool fees. TX-00, its public approval, the tier
+premium, the policy reserve, and deployment gas sit outside that 18 STRK. Query
+the pool again before funding because the fee is protocol state.
+
 ## Deployment sequence
 
 ```bash

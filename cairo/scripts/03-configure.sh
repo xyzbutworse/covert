@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Step 3: configure + lock + fund.
 #   1) configure_anonymizer(ANON_ADDRESS) once, as OWNER.
-#   2) Prove the configuration cannot be replaced (second configure reverts).
+#   2) Simulate a replacement attempt and prove it reverts without broadcasting.
 #   3) Owner approves the policy to spend RESERVE_WEI STRK.
 #   4) fund_reserve(RESERVE_WEI), as OWNER.
 set -euo pipefail
@@ -21,11 +21,12 @@ log_tx "configure_anonymizer" "${MAINNET_RPC_URL}" "${CFG_TX:-?}"
 
 echo
 echo "=== 3b. Prove anonymizer cannot be replaced ==="
-echo "   Re-invoking configure_anonymizer must REVERT with ALREADY_CONFIGURED."
-"${SNC[@]}" invoke --contract-address "${POLICY_ADDRESS}" --function configure_anonymizer --arguments "${ANON_ADDRESS}" 2>&1 \
+echo "   Dry-running configure_anonymizer again must REVERT with ALREADY_CONFIGURED."
+echo "   This check sends no transaction and spends no gas."
+"${SNC[@]}" invoke --contract-address "${POLICY_ADDRESS}" --function configure_anonymizer --arguments "${ANON_ADDRESS}" --dry-run --detailed 2>&1 \
   | grep -qiE 'ALREADY_CONFIGURED|revert' \
-  && echo "   CONFIRMED: second configure reverts (configuration is locked)." \
-  || echo "   WARNING: second configure did not visibly revert — investigate before continuing."
+  && echo "   CONFIRMED: replacement simulation reverts (configuration is locked)." \
+  || { echo "   ERROR: replacement simulation did not visibly revert. Stop and investigate." >&2; exit 1; }
 
 echo
 echo "=== 3c. Owner approves policy to spend reserve STRK ==="

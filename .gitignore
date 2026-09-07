@@ -24,3 +24,14 @@ design-preview.html
 
 # Local agent/editor tooling
 .claude
+
+# HyperFrames video project build artifacts
+videos/**/node_modules
+videos/**/.venv-tts*
+videos/**/.hyperframes
+videos/**/.thumbnails
+videos/**/.waveform-cache
+videos/**/snapshots
+videos/**/work-*
+videos/**/renders
+videos/**/*.mp4

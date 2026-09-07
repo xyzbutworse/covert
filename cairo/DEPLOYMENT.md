@@ -51,7 +51,7 @@ snforge test
 cairo/scripts/00-gates.sh
 ```
 
-Expected green: `typecheck`, `build`, `forge:code`, `scarb build`, `snforge test` (46 tests).
+Expected green: `typecheck`, `build`, `forge:code`, `scarb build`, `snforge test` (59 tests).
 
 ## Account setup (once, secret-safe)
 
@@ -98,7 +98,7 @@ sncast --url $MAINNET_RPC_URL --keystore ~/.covert/deployer.keystore --account ~
 
 Offline class hashes (recompute from the exact build before declaring):
 
-- `CovertPolicy` sierra class hash: `0xa65c4a824a40ec98483ad374d22e09f21b395c253b5f15e20e362880b98db1`
+- `CovertPolicy` sierra class hash: `0x18b68b6b3dfeb7f836ce404f6dc7a4921808faffb9c81cac73672ec2f62dd3`
 - `CovertAnonymizer` sierra class hash: `0x7fc2600c5d4763acdb7711454c633e7ae97e730d9908b86b13442c0ca6fb5e8`
 
 > These hashes correspond to the current `cairo/src` exactly. Any source change
@@ -123,7 +123,8 @@ cairo/scripts/03-configure.sh
 
 1. `configure_anonymizer(anonymizer)` once, as owner. Expected state transition:
    `anonymizer_configured: false → true`, `anonymizer: 0 → ANON_ADDRESS`, emits `AnonymizerConfigured`.
-2. Lock proof: re-invoking `configure_anonymizer` must revert `ALREADY_CONFIGURED`.
+2. Lock proof: a dry-run of a second `configure_anonymizer` call must revert
+   `ALREADY_CONFIGURED`. The script does not broadcast this rejected call.
 3. `STRK.approve(policy, RESERVE_WEI)` from owner.
 4. `fund_reserve(RESERVE_WEI)` from owner. Expected state:
    `reserve_amount: 0 → RESERVE_WEI`, emits `ReserveFunded`.

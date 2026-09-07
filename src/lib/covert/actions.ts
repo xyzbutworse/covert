@@ -67,6 +67,9 @@ async function submit(actions: WALLET_API.STRK20_ACTION[]): Promise<SubmitResult
   const account = walletAccount();
   let txHash: string;
   try {
+    // Build, prove, and simulate the exact action bundle before asking the
+    // wallet to broadcast it. Calldata, balance, and helper failures stop here.
+    await account.strk20PrepareInvoke(actions, true);
     const result = await account.strk20InvokeTransaction(actions);
     txHash = result.transaction_hash;
   } catch (e) {
